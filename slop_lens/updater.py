@@ -59,7 +59,14 @@ def detect(root=ROOT):
 
 
 def latest_sha(timeout=10):
-    """Commit SHA of GitHub main, or None when offline."""
+    """Commit SHA of GitHub main, or None when offline. git is fresher than the cached API."""
+    try:
+        out = subprocess.run(["git", "ls-remote", f"https://github.com/{REPO}.git", "refs/heads/main"],
+                             capture_output=True, text=True, timeout=timeout).stdout.split()
+        if out and len(out[0]) == 40:
+            return out[0]
+    except (OSError, subprocess.TimeoutExpired):
+        pass
     req = urllib.request.Request(f"https://api.github.com/repos/{REPO}/commits/main",
                                  headers={"Accept": "application/vnd.github+json", "User-Agent": "slop-lens-updater"})
     try:
