@@ -25,6 +25,8 @@ MCP: `slop_scan` { target, kind: "auto" }  ·  CLI: `slop-lens.py scan <대상>`
 - 웹/웹게임은 실제 브라우저로 렌더·클릭·플레이(Node 렌더 프로브 필요), 사운드를 녹음해 분석한다.
 - 에셋(아이콘·스프라이트·효과음·음악)을 분석하고 **리뷰용 시트 이미지**(화면 시트, 에셋 시트)를 만든다.
 - 결과는 **잠정**이다. 2단계 리뷰를 해야 확정된다.
+- **게임은 측정 결과를 리뷰 제출 전까지 숨긴다.** `slop_scan`은 scan_id와 수집한 자료만 돌려주고, 의심 규칙·점수·수정 계획은 `slop_submit_review` 뒤에 공개된다.
+  `reveal: true`(CLI `--reveal`)로 미리 볼 수 있지만, 그러면 이후 리뷰는 `meta.blind`와 상관없이 블라인드가 아닌 것으로 기록된다. 사용자가 원할 때만 쓴다.
 
 ### 2. 지각 리뷰 (판정의 핵심)
 MCP: `slop_review_protocol` { scan_id, blind: true }  ·  CLI: `scan <대상> --protocol --blind`

@@ -52,6 +52,7 @@ def main(argv=None):
     s.add_argument("--perception", default="auto", choices=["auto", "off"])
     s.add_argument("--protocol", action="store_true", help="판정 대신 지각 리뷰 프로토콜(볼 자료·답변 형식) 출력")
     s.add_argument("--blind", action="store_true", help="--protocol과 함께: 측정 결과를 숨긴 블라인드 리뷰 프로토콜")
+    s.add_argument("--reveal", action="store_true", help="게임: 리뷰 전에도 측정 결과를 바로 출력 (기본은 리뷰 전까지 숨김)")
 
     b = sub.add_parser("brief", help="Anti-Slop 리디자인 브리프만 출력")
     b.add_argument("target")
@@ -128,6 +129,9 @@ def main(argv=None):
             unknown = res.add_visual_answers(data.get("answers", data if isinstance(data, list) else []))
             if unknown:
                 print("알 수 없는 루브릭 ID 무시: " + ", ".join(unknown), file=sys.stderr)
+        if report.needs_blind(res) and not (a.reveal or a.fail_over is not None):
+            _out(report.blind_summary(res, as_json=a.format == "json"), a.out)
+            return 0
         if a.format == "json":
             _out(report.to_json(res), a.out)
         elif a.format == "html":

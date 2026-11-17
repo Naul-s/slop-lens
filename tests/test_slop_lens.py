@@ -69,6 +69,44 @@ class RegressionFalsePositives(unittest.TestCase):
         self.assertIsNotNone(gam_juice(_Ctx(code=unity_web + " void Update(){}", exts=(".cs",))))
 
 
+class BlindGameFlow(unittest.TestCase):
+    """Games: measurements stay hidden until a review is in, and the record says honestly whether it was blind."""
+
+    def test_unreviewed_game_is_held_and_blind(self):
+        from slop_lens import mcp_server
+        r = s("crafted-game", render="off")
+        self.assertEqual(r.verdict["code"], "UNDECIDED")  # even with a low score
+        mcp_server._SCANS[r.id] = r
+        out = mcp_server.call_tool("slop_fix_plan", {"scan_id": r.id})["content"][0]["text"]
+        self.assertIn("reveal", out)
+        self.assertNotIn("Anti-Slop", out)
+        from slop_lens import report
+        self.assertTrue(report.needs_blind(r))
+        self.assertNotIn("rule_id", report.blind_summary(r, as_json=True))
+
+    def test_revealed_measurements_make_review_non_blind_and_cap_confidence(self):
+        from slop_lens.review import protocol_markdown
+        r = s("sloppy-game", render="off")
+        protocol_markdown(r, blind=False)  # shows measured suspicions
+        r.add_review([{"id": k, "level": 2} for k in ("S1", "S2", "S3", "S4", "S6", "S7", "S8")],
+                     meta={"reviewer": "t", "blind": True, "knew_expected": False})
+        self.assertFalse(r.review_meta["blind"])
+        self.assertTrue(r.review_meta.get("blind_overridden"))
+        self.assertNotEqual(r.to_dict()["confidence"]["level"], "high")
+
+    def test_engine_template_page_not_flagged(self):
+        from slop_lens.rules.a11y import a11y_meta
+        from slop_lens.rules.visual import vis_hex
+
+        class C(_Ctx):
+            platform = "web"
+            def displayed_docs(self):
+                return [{"has_html_tag": True, "metas": {}}]
+        unity = C(code="<script>createUnityInstance(c, cfg)</script> #aaaaaa #bbbbbb")
+        self.assertIsNone(a11y_meta(unity))
+        self.assertIsNone(vis_hex(unity))
+
+
 class StaticCalibration(unittest.TestCase):
     """Without a browser the detector must still separate obvious slop from crafted work."""
 

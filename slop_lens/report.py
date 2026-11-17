@@ -98,7 +98,8 @@ def to_markdown(res, max_findings=20, include_plan=True, include_brief=True):
         L.append("")
         L.append(f"> 리뷰 {d['perception_index']:.0f} · 측정 {d['evidence_index'] if 'evidence_index' in d else d['static_index']:.0f} → {ag['note'] if ag else ''}"
                  + (f" · 리뷰어 {rm['reviewer']}" if rm.get("reviewer") else "")
-                 + (" · 블라인드 리뷰" if rm.get("blind") else " · 측정을 본 뒤 리뷰")
+                 + (" · 블라인드 리뷰" if rm.get("blind") else
+                    " · 블라인드로 제출됐지만 측정이 먼저 공개돼 블라인드 아님으로 처리" if rm.get("blind_overridden") else " · 측정을 본 뒤 리뷰")
                  + (" · **리뷰어가 기대 판정을 알고 있었음(독립 판정 아님)**" if rm.get("knew_expected") else ""))
         if ag and ag.get("conflict"):
             L.append(">")
@@ -236,6 +237,47 @@ def to_markdown(res, max_findings=20, include_plan=True, include_brief=True):
         L.append("<details><summary>규칙 실행 오류</summary>\n\n" + "\n".join(f"- {e}" for e in d["errors"]) + "\n</details>")
     for n in c.get("notes", []):
         L.append(f"> 참고: {n}")
+    return "\n".join(L)
+
+
+def needs_blind(res):
+    """Games are judged by a review first; until then the measured findings stay hidden so they can't anchor it."""
+    return res.kind == "game" and not res.review
+
+
+def blind_summary(res, as_json=False):
+    """What an unreviewed game scan returns: enough to start the review, nothing that hints at the verdict."""
+    ctx = res.ctx
+    r = ctx.render if ctx.render and ctx.render.get("ok") else None
+    p = getattr(ctx, "perception", None) or {}
+    from .rules._genre import play_reached
+    captured = {
+        "rendered": bool(r),
+        "screenshots": sum(len(v) if isinstance(v, list) else 1 for v in ((r or {}).get("screenshots") or {}).values()),
+        "frame_sheet": bool((p.get("sheets") or {}).get("frames")),
+        "play_reached": play_reached(ctx),
+        "sound_recorded": bool(((r or {}).get("game") or {}).get("sound")) or bool((getattr(ctx, "unity", None) or {}).get("capture")),
+    }
+    nxt = [f"slop_review_protocol {{scan_id: \"{res.id}\", blind: true}} 로 리뷰 자료를 받는다 (CLI: scan <대상> --protocol --blind)",
+           "원본 프레임을 한 장씩 열어 보고 감각별로 답한다",
+           f"slop_submit_review {{scan_id: \"{res.id}\", ..., meta: {{blind: true}}}} 로 제출하면 판정과 측정 결과가 함께 공개된다"]
+    if as_json:
+        return json.dumps({"tool": "SlopLens", "scan_id": res.id, "target": res.ctx.target, "kind": "game", "blind": True,
+                           "verdict": {"code": "UNDECIDED", "label": "판정 보류 (게임: 지각 리뷰 필요)"},
+                           "captured": captured, "next": nxt,
+                           "note": "측정 결과는 리뷰가 그것에 끌려가지 않도록 리뷰 제출 전까지 숨깁니다. 바로 보려면 reveal=true (이후 리뷰는 블라인드가 아님)."},
+                          ensure_ascii=False, indent=2)
+    yn = lambda v: "예" if v else ("확인 못 함" if v is None else "아니요")
+    L = ["# SlopLens — 게임 측정 완료 (블라인드)", "",
+         f"대상 `{res.ctx.target}` · scan_id `{res.id}`", "",
+         "## 판정: 보류 — 지각 리뷰가 필요합니다", "",
+         "게임은 측정만으로 AI 슬롭 여부를 가를 수 없어서(검증 AUC 0.48) 화면을 직접 본 리뷰로 판정합니다.",
+         "**측정 결과(의심 규칙·점수)는 리뷰가 거기에 끌려가지 않도록 리뷰를 제출할 때까지 숨깁니다.**", "",
+         "## 수집한 자료",
+         f"- 실제 브라우저 실행: {yn(captured['rendered'])} · 스크린샷 {captured['screenshots']}장 · 화면 시트: {yn(captured['frame_sheet'])}",
+         f"- 자동 플레이가 게임 화면까지 도달: {yn(captured['play_reached'])} · 소리 기록: {yn(captured['sound_recorded'])}",
+         "", "## 다음 단계"] + [f"{i}. {s}" for i, s in enumerate(nxt, 1)] + [
+         "", "> 측정 결과를 지금 보려면 `reveal: true`(CLI `--reveal`)로 다시 요청하세요. 그 뒤의 리뷰는 블라인드가 아닌 것으로 기록됩니다."]
     return "\n".join(L)
 
 

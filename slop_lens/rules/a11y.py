@@ -41,6 +41,9 @@ def a11y_meta(ctx):
     docs = [d for d in ctx.displayed_docs() if d.get("has_html_tag")]
     if not docs or ctx.platform == "extension":
         return None
+    from ._genre import compiled_build
+    if compiled_build(ctx):
+        return None  # engine export page: the store page (itch.io etc.) carries the share card, not this template
     d = docs[0]
     missing = []
     m = d.get("metas", {})

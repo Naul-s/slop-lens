@@ -38,6 +38,8 @@ TOOLS = [
                 "render": {"type": "string", "enum": ["auto", "on", "off"], "default": "auto",
                            "description": "auto: Node 렌더 프로브가 설치돼 있으면 실제 브라우저로 렌더링·클릭·플레이해 측정 (15~60초). off: 정적 분석만"},
                 "screenshots_dir": {"type": "string", "description": "스크린샷 저장 폴더 (기본: 시스템 임시 폴더)"},
+                "reveal": {"type": "boolean", "default": False,
+                           "description": "게임은 기본적으로 리뷰 제출 전까지 측정 결과를 숨깁니다(블라인드). true면 바로 공개하고, 이후 리뷰는 블라인드가 아닌 것으로 기록"},
             },
             "required": ["target"],
         },
@@ -96,7 +98,8 @@ TOOLS = [
         "title": "수정 계획 + Anti-Slop 브리프",
         "description": "scan_id의 발견 사항을 노력 대비 영향 순으로 정렬한 단계별 수정 계획, 단계별 예상 점수, 그리고 코딩 에이전트에 붙여넣을 수 있는 리디자인 브리프를 반환합니다.",
         "inputSchema": {"type": "object", "properties": {
-            "scan_id": {"type": "string"}, "format": {"type": "string", "enum": ["markdown", "json"], "default": "markdown"}},
+            "scan_id": {"type": "string"}, "format": {"type": "string", "enum": ["markdown", "json"], "default": "markdown"},
+            "reveal": {"type": "boolean", "default": False, "description": "리뷰 전인 게임의 수정 계획을 지금 공개 (이후 리뷰는 블라인드 아님)"}},
             "required": ["scan_id"]},
     },
     {
@@ -187,6 +190,9 @@ def call_tool(name, args):
             with open(p, "w", encoding="utf-8") as f:
                 f.write(report.to_html(res))
         mf = int(args.get("max_findings", 15))
+        if report.needs_blind(res) and not args.get("reveal"):
+            return _text(report.blind_summary(res, as_json=args.get("format") == "json"))
+        res.revealed = True
         if args.get("format") == "json":
             return _text(report.to_json(res, mf))
         return _text(report.to_markdown(res, max_findings=mf))
@@ -218,6 +224,11 @@ def call_tool(name, args):
         return _text(body)
     if name == "slop_fix_plan":
         res = _get_scan(args.get("scan_id", ""))
+        if report.needs_blind(res) and not args.get("reveal"):
+            return _text("이 게임은 아직 지각 리뷰 전이라 수정 계획(=측정 결과)을 숨기고 있습니다. "
+                         f"slop_review_protocol {{scan_id: \"{res.id}\", blind: true}} → slop_submit_review 후에 다시 요청하거나, "
+                         "지금 보려면 reveal: true를 주세요 (이후 리뷰는 블라인드가 아닌 것으로 기록).")
+        res.revealed = True
         if args.get("format") == "json":
             return _text(json.dumps(res.fix_plan(), ensure_ascii=False, indent=2))
         return _text(_plan_markdown(res))

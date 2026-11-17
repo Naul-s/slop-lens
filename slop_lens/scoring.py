@@ -152,7 +152,7 @@ def confidence(ctx, visual_ratio=0.0, reviewed=False, review_meta=None, agreemen
     level = "high" if pts >= 4 else "medium" if pts >= 2.5 else "low"
     # coverage can't make up for a non-independent or contradicted judgment
     m = review_meta or {}
-    if level == "high" and reviewed and (m.get("knew_expected") or (agreement and agreement.get("conflict"))):
+    if level == "high" and reviewed and (m.get("knew_expected") or not m.get("blind") or (agreement and agreement.get("conflict"))):
         level = "medium"
     if level == "high" and not reviewed and ctx.kind == "game":
         level = "medium"  # game measurements alone did not separate AI from human work in validation

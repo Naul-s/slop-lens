@@ -62,6 +62,8 @@ def protocol_markdown(res, blind=False):
     blind=True hides every measured interpretation so the reviewer judges from the screens first (no anchoring)."""
     ctx = res.ctx
     kind = ctx.kind
+    if not blind:
+        res.revealed = True  # the non-blind protocol lists the measured suspicions
     p = getattr(ctx, "perception", None) or {}
     r = ctx.render if ctx.render and ctx.render.get("ok") else {}
     cap = (getattr(ctx, "unity", None) or {}).get("capture") or {}

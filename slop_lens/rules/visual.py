@@ -290,6 +290,9 @@ def vis_icon_tile(ctx):
            "effort": "M",
            "directive": "색상은 반드시 CSS 변수(디자인 토큰)로 정의해서 사용."})
 def vis_hex(ctx):
+    from ._genre import compiled_build
+    if compiled_build(ctx):
+        return None  # the engine's default web template, not the maker's colour system
     style = ctx.joined("style")
     if not style:
         return None

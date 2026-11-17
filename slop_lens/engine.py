@@ -74,11 +74,11 @@ class ScanResult:
             self.visual_blend = 0.0
             self.status = "잠정"
         self.verdict = scoring.verdict_for(self.index)
-        if self.kind == "game" and self.status == "잠정" and self.index >= 20:
+        if self.kind == "game" and self.status == "잠정":
             # held-out validation: measurements alone could not separate AI-made from human-made games (AUC ≈ 0.5),
             # because jam-scale human games share the same missing-polish signals. Don't label a game slop without eyes on it.
             self.verdict = {"code": "UNDECIDED", "label": "판정 보류 (게임: 지각 리뷰 필요)",
-                            "description": f"측정 점수 {self.index:.0f}는 마감 결함(사운드·피드백·상태 흐름 등)의 양이지 AI 여부가 아닙니다. "
+                            "description": f"측정 점수 {self.index:.0f}는 높든 낮든 마감 결함(사운드·피드백·상태 흐름 등)의 양이지 AI 여부가 아닙니다. "
                                            "검증에서 게임은 측정만으로 AI 제작물과 사람 제작물을 가르지 못했습니다(AUC 0.48). "
                                            "화면을 직접 보는 지각 리뷰로 판정을 확정하세요."}
         # where the reviewer's eyes and the measurements disagree, neither should be trusted blindly
@@ -103,6 +103,9 @@ class ScanResult:
         self.review, unknown = _rv.normalize(items, self.kind)
         self.frame_notes = _rv.normalize_frames(frames)
         self.review_meta = _rv.normalize_meta(meta)
+        if getattr(self, "revealed", False) and self.review_meta.get("blind"):
+            self.review_meta["blind"] = False
+            self.review_meta["blind_overridden"] = True  # measurements were shown before this review
         self.recompute()
         return unknown
 
