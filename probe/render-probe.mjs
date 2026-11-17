@@ -152,7 +152,7 @@ const INSTRUMENT = () => {
   const mp = HTMLMediaElement.prototype.play;
   HTMLMediaElement.prototype.play = function () { if (!(this instanceof HTMLVideoElement)) { S.audio++; if (S.snd) { S.snd.mediaPlays = (S.snd.mediaPlays || 0) + 1; const u = this.currentSrc || this.src; if (u && S.snd.media.length < 50) S.snd.media.push(u); } } const r = mp.apply(this, arguments); if (r && r.catch) r.catch(() => {}); return r; };
   // ---- Web Audio: how the game's sound is BUILT (synth vs samples, effects, variation) + a recording of the mix
-  S.snd = { osc: [], buffers: 0, bufferRates: [], filters: 0, convolvers: 0, compressors: 0, shapers: 0, ramps: 0, media: [] };
+  S.snd = { osc: [], buffers: 0, bufferRates: [], bufferKinds: new Set(), filters: 0, convolvers: 0, compressors: 0, shapers: 0, ramps: 0, media: [] };
   S.rec = { chunks: [], len: 0, sr: 44100, on: false };
   const BAC = window.BaseAudioContext ? BaseAudioContext.prototype : (window.AudioContext && AudioContext.prototype);
   if (BAC) {
@@ -168,7 +168,9 @@ const INSTRUMENT = () => {
     const cb = BAC.createBufferSource;
     if (cb) BAC.createBufferSource = function (...a) {
       const s = cb.apply(this, a), st = s.start;
-      s.start = function (...b) { S.snd.buffers++; if (S.snd.bufferRates.length < 300) S.snd.bufferRates.push(+s.playbackRate.value.toFixed(3)); return st.apply(this, b); };
+      s.start = function (...b) { S.snd.buffers++; if (S.snd.bufferRates.length < 300) S.snd.bufferRates.push(+s.playbackRate.value.toFixed(3));
+        const bf = s.buffer; if (bf && S.snd.bufferKinds.size < 200) S.snd.bufferKinds.add(bf.length + ':' + bf.numberOfChannels + ':' + bf.sampleRate);
+        return st.apply(this, b); };
       return s;
     };
   }
@@ -585,7 +587,7 @@ async function playGame(page, out) {
       mix = window.__slLib ? window.__slLib.audioFeatures(x, S.rec.sr) : null;
     }
     return { oscillatorPlays: osc.length, oscillatorTypes: types, distinctSynthVoices: voices.slice(0, 20), samplePlays: snd.buffers,
-      sampleRateVariety: rates.length, filters: snd.filters, reverbs: snd.convolvers, compressors: snd.compressors, distortion: snd.shapers,
+      distinctSamples: snd.bufferKinds ? snd.bufferKinds.size : null, sampleRateVariety: rates.length, filters: snd.filters, reverbs: snd.convolvers, compressors: snd.compressors, distortion: snd.shapers,
       envelopeRamps: snd.ramps, mediaFiles: media.slice(0, 10), mediaPlays: snd.mediaPlays || 0, mix };
   }).catch(() => null);
   return g;

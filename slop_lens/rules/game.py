@@ -3,7 +3,7 @@ keyword-level checks for Unity (C#), Godot (GDScript), LÖVE (Lua)."""
 import re
 
 from ..model import Evidence, Result, rule
-from ._genre import realtime
+from ._genre import compiled_build, realtime
 
 G = ["game"]
 
@@ -102,6 +102,8 @@ JUICE = {
 def gam_juice(ctx):
     if not realtime(ctx):
         return None  # hit-stop / shake / particles are action-game expectations
+    if compiled_build(ctx):
+        return None  # compiled engine build: juice lives in wasm, not readable code — judge it from the screen
     code = _code(ctx)
     found = [k for k, p in JUICE.items() if re.search(p, code)]
     if len(found) <= 1:
@@ -119,6 +121,8 @@ def gam_juice(ctx):
            "effort": "S",
            "directive": "핵심 행동 효과음 + BGM + 음소거 토글 필수."})
 def gam_audio(ctx):
+    if compiled_build(ctx):
+        return None  # sound is measured at runtime (AUD-*) for compiled builds
     code = _code(ctx)
     if not re.search(r"new\s+Audio\s*\(|AudioContext|Howl\b|howler|\.sound\.|sound\.(?:add|play)|AudioSource|AudioStreamPlayer|playSound|\bsfx\b|\bbgm\b|"
                      r"\.(?:mp3|ogg|wav)\b|<audio\b|zzfx|Tone\.|webkitAudioContext|me\.audio|createjs\.Sound|SoundJS|jsfxr|sfxr|"
@@ -153,6 +157,8 @@ def gam_alert(ctx):
 def gam_difficulty(ctx):
     if not realtime(ctx):
         return None  # puzzles / idle / narrative games progress by content, not spawn curves
+    if compiled_build(ctx):
+        return None
     code = _code(ctx)
     if not re.search(r"difficult|level\s*(?:\+\+|\+=)|\bwave|speed\s*(?:\*=|\+=)|spawn(?:Rate|Interval|Delay|Timer)\s*(?:\*=|-=|=\s*Math\.max)|"
                      r"increase|ramp|stage|progress|난이도|tier", code, re.I):
@@ -170,6 +176,8 @@ def gam_difficulty(ctx):
 def gam_states(ctx):
     if not realtime(ctx):
         return None  # turn-based / idle games need no pause state
+    if compiled_build(ctx):
+        return None
     code = _code(ctx)
     has_pause = re.search(r"pause|paused", code, re.I)
     has_menu = re.search(r"menu|title ?screen|start ?screen|gameState|game_state|GameState|mode\s*===?\s*[\"']|state\s*===?\s*[\"'](?:menu|title|playing|paused|over|gameover)|"

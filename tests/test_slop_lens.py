@@ -29,6 +29,46 @@ def s(name, **kw):
     return scan(os.path.join(EX, name), **kw)
 
 
+class _Ctx:
+    """Minimal scan context for calling one rule directly."""
+    def __init__(self, code="", sound=None, exts=(), webgl=True):
+        self._code = code
+        self.files = [type("F", (), {"ext": e})() for e in exts]
+        game = {"hasCanvas": True, "rafFrames": 600, "draw": {"webgl": 1000 if webgl else 0}, "changedDuringPlay": True}
+        if sound is not None:
+            game["sound"] = sound
+        self.render = {"ok": True, "game": game}
+        self.unity = None
+        self.perception = None
+
+    def joined(self, *roles):
+        return self._code
+
+
+class RegressionFalsePositives(unittest.TestCase):
+    """Cases a human reviewer overturned (2026-11-18, a Unity WebGL jam game)."""
+
+    def test_many_different_samples_are_not_repetition(self):
+        from slop_lens.model import CLEAN
+        from slop_lens.rules.perception import aud_repeat
+        varied = {"samplePlays": 38, "distinctSamples": 9, "sampleRateVariety": 1, "oscillatorPlays": 0, "mediaPlays": 0}
+        self.assertIs(aud_repeat(_Ctx(sound=varied)), CLEAN)
+        same = dict(varied, distinctSamples=1)
+        self.assertIsNotNone(getattr(aud_repeat(_Ctx(sound=same)), "count", None))
+        old_probe = {k: v for k, v in varied.items() if k != "distinctSamples"}
+        self.assertIsNone(aud_repeat(_Ctx(sound=old_probe)))
+
+    def test_compiled_engine_build_skips_code_absence_rules(self):
+        from slop_lens.rules.game import gam_audio, gam_juice
+        unity_web = "<script src='Build/x.loader.js'></script><script>createUnityInstance(canvas, config)</script>"
+        self.assertIsNone(gam_juice(_Ctx(code=unity_web)))
+        self.assertIsNone(gam_audio(_Ctx(code=unity_web)))
+        # plain hand-written canvas game without juice code is still flagged
+        self.assertIsNotNone(gam_juice(_Ctx(code="requestAnimationFrame(loop); ctx.fillRect(0,0,10,10)")))
+        # Unity *project* source present → code checks still apply
+        self.assertIsNotNone(gam_juice(_Ctx(code=unity_web + " void Update(){}", exts=(".cs",))))
+
+
 class StaticCalibration(unittest.TestCase):
     """Without a browser the detector must still separate obvious slop from crafted work."""
 

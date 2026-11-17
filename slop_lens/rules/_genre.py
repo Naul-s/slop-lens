@@ -26,6 +26,18 @@ RT_CODE = re.compile(r"requestAnimationFrame|new\s+Phaser\.Game|PIXI\.Applicatio
                      r"getContext\(\s*[\"'](?:2d|webgl2?)[\"']", re.I)
 
 
+ENGINE_BUILD = re.compile(r"createUnityInstance|UnityLoader\.instantiate|\.unityweb\b|GODOT_CONFIG|godot\.(?:js|wasm|pck)", re.I)
+
+
+def compiled_build(ctx):
+    """A web export of a compiled engine (Unity WebGL, Godot): the game logic ships as wasm/data, not readable
+    source. Rules that flag a feature because it is *absent from the code* must not run on these."""
+    if any(f.ext in (".cs", ".gd") for f in getattr(ctx, "files", [])):
+        return False  # the project source is here, so code checks are meaningful
+    code = ctx.joined("script", "engine", "markup") if hasattr(ctx, "joined") else ""
+    return bool(ENGINE_BUILD.search(code))
+
+
 def realtime(ctx):
     """Real-time (action) game: a large canvas driven by a frame loop. Turn-based / idle / DOM games are not."""
     if getattr(ctx, "unity", None):

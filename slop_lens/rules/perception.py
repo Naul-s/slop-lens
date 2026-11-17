@@ -84,9 +84,15 @@ def aud_repeat(ctx):
     src, s = _snd(ctx)
     if src == "web" and s:
         plays = s.get("oscillatorPlays", 0) + s.get("samplePlays", 0) + s.get("mediaPlays", 0)
-        voices = len(s.get("distinctSynthVoices") or []) + (s.get("sampleRateVariety") or 0) + len(set(s.get("mediaFiles") or []))
+        if s.get("samplePlays") and s.get("distinctSamples") is None:
+            return None  # older probe: which sample each playback used was not recorded — unmeasured, not "all the same"
+        samples = s.get("distinctSamples") or 0
+        voices = len(s.get("distinctSynthVoices") or []) + samples + len(set(s.get("mediaFiles") or []))
+        if s.get("samplePlays") and samples <= 1:
+            voices += max(0, (s.get("sampleRateVariety") or 0) - 1)  # one sample, pitched → still variation
         if plays >= 4 and voices <= 1:
-            return Result(1, [E(f"{plays}회 재생이 모두 같은 음색 {s.get('distinctSynthVoices')}")], "모든 효과음이 같은 소리")
+            what = f"합성음 {s.get('distinctSynthVoices')}" if s.get("oscillatorPlays") else f"샘플 {samples}종"
+            return Result(1, [E(f"{plays}회 재생이 모두 같은 소리 ({what})")], "모든 효과음이 같은 소리")
         return CLEAN if plays >= 4 else None
     if src == "unity" and s:
         ev = [e for e in s.get("soundEvents", []) if not e.get("loop")]
