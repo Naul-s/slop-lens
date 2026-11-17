@@ -45,7 +45,13 @@ claude plugin install slop-lens --marketplace Naul-s/slop-lens
 | Cursor · VS Code · Windsurf, etc. | `mcp.json` in [`integrations/`](integrations) |
 
 Replace `/ABS/PATH` or `<path>` with the folder you cloned into.
-Optional: `npm install --prefix probe` (Node 18+) to measure the rendered page in a real browser.
+
+**Optional: real-browser measurement** (Node 18+, uses your installed Chrome or Edge). Without it, scans read the source only.
+
+```bash
+npm install --prefix probe                                              # cloned repo
+npm install --prefix ~/.claude/plugins/cache/slop-lens/slop-lens/0.4.0/probe   # Claude Code plugin
+```
 
 ## Usage
 
@@ -105,6 +111,7 @@ AI로 만든 웹사이트·게임이 **왜 "AI 슬롭"처럼 보이는지** 찾�
   2. Code 탭 입력창 옆 **+** → **Add plugins** (또는 **Plugins → Browse plugins**) → **slop-lens** 선택
 - **Claude 데스크탑 앱 (Chat 탭)** — 리포를 클론한 뒤 설정 → 개발자 → 구성 편집에서 [`integrations/generic/mcp.json`](integrations/generic/mcp.json) 내용을 붙여 넣고 앱을 다시 시작합니다.
 - **Gemini · Codex · Cursor 등** — 위 [Install](#install) 표를 참고하세요.
+- **선택: 실제 브라우저 측정** — Node 18+와 설치된 Chrome·Edge를 씁니다. 없으면 소스만 읽고 판정합니다. 명령은 위 [Install](#install) 끝에 있습니다.
 
 **사용** — 에이전트 안에서 **"이거 AI 슬롭처럼 보이는지 봐줘"** 라고 말하면 됩니다. 직접 실행하려면 위 [Usage](#usage) 명령을 쓰세요.
 
