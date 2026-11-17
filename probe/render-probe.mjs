@@ -70,7 +70,7 @@ try {
   ({ chromium } = await import('playwright-core'));
 } catch {
   try { ({ chromium } = await import('playwright')); } catch {
-    emit({ ok: false, error: 'playwright-core 미설치: `npm install --prefix probe` 를 실행하세요.' });
+    emit({ ok: false, error: 'playwright-core 미설치: SlopLens 폴더에서 `npm install` 을 실행하세요.' });
     process.exit(0);
   }
 }

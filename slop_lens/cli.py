@@ -7,6 +7,7 @@
   slop-lens explain <RULE_ID>
   slop-lens brief <path|url>         # paste-ready anti-slop redesign brief
   slop-lens mcp                      # start MCP stdio server
+  slop-lens update [--check]         # update to the latest GitHub version
 """
 import argparse
 import json
@@ -71,6 +72,9 @@ def main(argv=None):
 
     sub.add_parser("mcp", help="MCP stdio 서버 실행")
     sub.add_parser("doctor", help="렌더 프로브(Node·Playwright·브라우저) 설치 상태 확인")
+    up = sub.add_parser("update", help="GitHub 최신 버전으로 업데이트 (Claude Code 플러그인·git clone·Gemini 확장 자동 감지)")
+    up.add_argument("--check", action="store_true", help="업데이트하지 않고 새 버전이 있는지만 확인")
+    up.add_argument("--mode", choices=["auto", "plugin", "git", "gemini"], default="auto", help=argparse.SUPPRESS)
     u = sub.add_parser("unity-capture", help="Unity 프로젝트를 복사본에서 빌드·자동 플레이해 화면·사운드 수집 (원본 무수정)")
     u.add_argument("project")
     u.add_argument("--seconds", type=int, default=30)
@@ -91,6 +95,13 @@ def main(argv=None):
         print(json.dumps({k: res.get(k) for k in ("ok", "error", "editor", "editor_match", "out", "elapsed_s", "frames", "mixWav", "fmod", "log", "log_errors")},
                          ensure_ascii=False, indent=1))
         return 0 if res.get("ok") else 1
+    if a.cmd == "update":
+        from . import updater
+        try:
+            sys.stdout.reconfigure(encoding="utf-8", line_buffering=True)
+        except Exception:
+            pass
+        return updater.run(a.mode, a.check, log=lambda m: print(m, flush=True))
     if a.cmd == "doctor":
         from . import render as _r
         st = _r.status()

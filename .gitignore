@@ -9,6 +9,7 @@ venv/
 
 # Node probe
 probe/node_modules/
+/node_modules/
 
 # Scan outputs (screenshots, reports, captures) — never commit other people's pages or private projects
 .slop-lens/

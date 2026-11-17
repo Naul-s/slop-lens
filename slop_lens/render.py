@@ -33,15 +33,21 @@ def find_node():
     return None
 
 
+def _has_playwright():
+    # Node resolves packages from probe/node_modules first, then the repo root (where the
+    # root package.json installs them, including Claude Code's automatic plugin install).
+    return any(os.path.isdir(os.path.join(d, "node_modules", pkg))
+               for d in (PROBE_DIR, ROOT) for pkg in ("playwright-core", "playwright"))
+
+
 def status():
     node = find_node()
     if not node:
-        return {"available": False, "reason": "Node.js 18+ 미설치 → 정적 분석만 수행 (렌더 측정을 쓰려면 Node 설치 후 `npm install --prefix probe`)"}
+        return {"available": False, "reason": "Node.js 18+ 미설치 → 정적 분석만 수행 (렌더 측정을 쓰려면 Node 설치 후 SlopLens 폴더에서 `npm install`)"}
     if not os.path.isfile(PROBE):
         return {"available": False, "reason": "probe/render-probe.mjs 없음"}
-    if not (os.path.isdir(os.path.join(PROBE_DIR, "node_modules", "playwright-core")) or
-            os.path.isdir(os.path.join(PROBE_DIR, "node_modules", "playwright"))):
-        return {"available": False, "node": node, "reason": "렌더 프로브 의존성 미설치 → `npm install --prefix probe` 실행 필요"}
+    if not _has_playwright():
+        return {"available": False, "node": node, "reason": "렌더 프로브 의존성 미설치 → SlopLens 폴더에서 `npm install` 실행 필요"}
     return {"available": True, "node": node}
 
 

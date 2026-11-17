@@ -2,16 +2,16 @@
   "name": "slop-lens-probe",
   "version": "0.4.0",
   "private": true,
-  "description": "Optional render probe for SlopLens: renders the page in a real browser and measures computed styles, contrast, mobile layout, dead clicks and game runtime.",
+  "description": "Render probe for SlopLens. Its dependency (playwright-core) is declared in the repository root package.json.",
   "type": "module",
   "main": "render-probe.mjs",
-  "bin": { "slop-lens-probe": "render-probe.mjs" },
-  "scripts": {
-    "probe": "node render-probe.mjs",
-    "install-browser": "playwright-core install chromium"
+  "bin": {
+    "slop-lens-probe": "render-probe.mjs"
   },
-  "engines": { "node": ">=18" },
-  "dependencies": {
-    "playwright-core": "1.65.1"
+  "scripts": {
+    "probe": "node render-probe.mjs"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

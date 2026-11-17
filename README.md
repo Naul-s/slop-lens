@@ -47,11 +47,22 @@ claude plugin install slop-lens --marketplace Naul-s/slop-lens
 Replace `/ABS/PATH` or `<path>` with the folder you cloned into.
 
 **Optional: real-browser measurement** (Node 18+, uses your installed Chrome or Edge). Without it, scans read the source only.
+The Claude Code plugin installs it automatically. For a cloned repo, run `npm install` in the SlopLens folder.
+
+## Update
+
+Gets the latest version from GitHub. It detects how SlopLens was installed (Claude Code plugin, git clone, or Gemini extension).
+
+```text
+/slop-lens:update            # inside Claude Code
+```
 
 ```bash
-npm install --prefix probe                                              # cloned repo
-npm install --prefix ~/.claude/plugins/cache/slop-lens/slop-lens/0.4.0/probe   # Claude Code plugin
+python bin/slop-lens.py update           # update now
+python bin/slop-lens.py update --check   # only check for a new version
 ```
+
+After a plugin update, run `/reload-plugins` or start a new session.
 
 ## Usage
 
@@ -111,7 +122,13 @@ AI로 만든 웹사이트·게임이 **왜 "AI 슬롭"처럼 보이는지** 찾�
   2. Code 탭 입력창 옆 **+** → **Add plugins** (또는 **Plugins → Browse plugins**) → **slop-lens** 선택
 - **Claude 데스크탑 앱 (Chat 탭)** — 리포를 클론한 뒤 설정 → 개발자 → 구성 편집에서 [`integrations/generic/mcp.json`](integrations/generic/mcp.json) 내용을 붙여 넣고 앱을 다시 시작합니다.
 - **Gemini · Codex · Cursor 등** — 위 [Install](#install) 표를 참고하세요.
-- **선택: 실제 브라우저 측정** — Node 18+와 설치된 Chrome·Edge를 씁니다. 없으면 소스만 읽고 판정합니다. 명령은 위 [Install](#install) 끝에 있습니다.
+- **선택: 실제 브라우저 측정** — Node 18+와 설치된 Chrome·Edge를 씁니다. 없으면 소스만 읽고 판정합니다. Claude Code 플러그인은 자동으로 설치되고, 클론한 경우 SlopLens 폴더에서 `npm install`을 실행하세요.
+
+**업데이트** — GitHub 최신 버전을 받습니다. 설치 방식(Claude Code 플러그인·git clone·Gemini 확장)을 자동으로 알아냅니다.
+
+- Claude Code 안에서: `/slop-lens:update` (확인만: `/slop-lens:update --check`)
+- 터미널에서: `python bin/slop-lens.py update` (확인만: `--check`)
+- 플러그인은 업데이트 후 `/reload-plugins`를 실행하거나 새 세션을 열면 적용됩니다.
 
 **사용** — 에이전트 안에서 **"이거 AI 슬롭처럼 보이는지 봐줘"** 라고 말하면 됩니다. 직접 실행하려면 위 [Usage](#usage) 명령을 쓰세요.
 

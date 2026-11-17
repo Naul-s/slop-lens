@@ -146,7 +146,7 @@ def to_markdown(res, max_findings=20, include_plan=True, include_brief=True):
         if shots:
             L.append("- 스크린샷: " + ", ".join(f"`{p}`" for p in shots))
     else:
-        L.append("- 정적 분석만 수행 (렌더 측정 없음). Node.js + `npm install --prefix probe`를 설치하면 실제 색·대비·클릭·모바일·게임 런타임을 측정합니다.")
+        L.append("- 정적 분석만 수행 (렌더 측정 없음). Node.js를 설치하고 SlopLens 폴더에서 `npm install`을 실행하면 실제 색·대비·클릭·모바일·게임 런타임을 측정합니다.")
     L.append("")
 
     L.append("## 영역별 점수")

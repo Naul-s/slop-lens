@@ -6,7 +6,7 @@
 - 판정의 핵심은 **보이고 들리는 것**이다. MCP: `slop_scan` → `slop_review_protocol`(시트 이미지를 직접 열어 봄) → `slop_submit_review` → `slop_fix_plan`
 - Unity 게임은 먼저 `python bin/slop-lens.py unity-capture <프로젝트>`로 실행 캡처(원본 무수정, 복사본 빌드)를 만든다.
 - 없으면 CLI: `python bin/slop-lens.py scan <폴더|URL>` (Python 3.9+, 의존성 없음)
-- 렌더 실측(선택): Node 18+ 와 `npm install --prefix probe` 가 있으면 자동으로 실제 브라우저 측정과 스크린샷이 추가된다. `python bin/slop-lens.py doctor`로 확인.
+- 렌더 실측(선택): Node 18+ 와 SlopLens 폴더에서 `npm install` 을 해 두면 자동으로 실제 브라우저 측정과 스크린샷이 추가된다. `python bin/slop-lens.py doctor`로 확인.
 - 전체 워크플로와 수정 원칙: [skills/slop-lens/SKILL.md](skills/slop-lens/SKILL.md)
 - 수정할 때 가짜 후기·통계·연락처를 더 그럴듯한 가짜로 바꾸지 말 것. 브랜드 결정은 사용자에게 먼저 물을 것.
 

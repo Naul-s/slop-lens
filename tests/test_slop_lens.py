@@ -1,7 +1,7 @@
 """Run:  python -m unittest discover -s tests -v   (from the repo root, no Python dependencies)
 
 Static calibration always runs. Render tests run only when the Node probe is installed
-(`npm install --prefix probe`); otherwise they are skipped, never failed.
+(`npm install` in the repo root); otherwise they are skipped, never failed.
 """
 import json
 import os
@@ -79,7 +79,7 @@ class StaticCalibration(unittest.TestCase):
         self.assertGreater(r.index, before + 30)
 
 
-@unittest.skipUnless(HAS_RENDER, "render probe not installed (npm install --prefix probe)")
+@unittest.skipUnless(HAS_RENDER, "render probe not installed (npm install)")
 class RenderCalibration(unittest.TestCase):
     """With a real browser, measurements replace guesses and must keep (or improve) separation."""
 

@@ -1,0 +1,5 @@
+description = "SlopLens를 GitHub 최신 버전으로 업데이트"
+prompt = """
+SlopLens 확장을 GitHub 최신 버전으로 업데이트해줘.
+셸에서 `gemini extensions update slop-lens`를 실행하고, 결과를 짧게 알려준 뒤 Gemini CLI를 다시 시작해야 적용된다고 안내해.
+"""

@@ -1,0 +1,9 @@
+{
+  "name": "slop-lens",
+  "private": true,
+  "description": "Optional browser-measurement dependency for SlopLens (probe/). Claude Code installs it automatically for plugin installs; for a clone run `npm install`.",
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "playwright-core": "1.65.1"
+  }
+}
