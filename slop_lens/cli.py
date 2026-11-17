@@ -53,6 +53,7 @@ def main(argv=None):
     s.add_argument("--protocol", action="store_true", help="판정 대신 지각 리뷰 프로토콜(볼 자료·답변 형식) 출력")
     s.add_argument("--blind", action="store_true", help="--protocol과 함께: 측정 결과를 숨긴 블라인드 리뷰 프로토콜")
     s.add_argument("--reveal", action="store_true", help="게임: 리뷰 전에도 측정 결과를 바로 출력 (기본은 리뷰 전까지 숨김)")
+    s.add_argument("--attach", nargs="+", metavar="IMG", help="--protocol/--review와 함께: 직접 찍은 스크린샷을 리뷰 자료에 추가")
 
     b = sub.add_parser("brief", help="Anti-Slop 리디자인 브리프만 출력")
     b.add_argument("target")
@@ -114,13 +115,14 @@ def main(argv=None):
         res = scan(a.target, a.kind, a.render, a.shots, a.perception)
         if a.protocol:
             from .review import protocol_markdown
-            _out(protocol_markdown(res, blind=a.blind), a.out)
+            _out(protocol_markdown(res, blind=a.blind, attach=a.attach), a.out)
             return 0
         if a.review:
             with open(a.review, encoding="utf-8") as f:
                 rv = json.load(f)
-            unknown = res.add_review(rv.get("review", rv if isinstance(rv, list) else []), rv.get("frames") if isinstance(rv, dict) else None,
-                                   rv.get("meta") if isinstance(rv, dict) else None)
+            isd = isinstance(rv, dict)
+            unknown = res.add_review(rv.get("review", []) if isd else (rv if isinstance(rv, list) else []), rv.get("frames") if isd else None,
+                                     rv.get("meta") if isd else None, attach=(a.attach or []) + list((rv.get("attach") if isd else None) or []))
             if unknown:
                 print("알 수 없는 리뷰 ID 무시: " + ", ".join(unknown), file=sys.stderr)
         if a.visual:

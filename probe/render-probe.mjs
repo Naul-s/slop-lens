@@ -31,7 +31,7 @@ const args = Object.fromEntries(
 const KIND = args.kind || 'auto';
 const OUT = args.out || null;
 const MAX_CLICKS = +(args.clicks || 12);
-const PLAY_MS = +(args.play || 8000);
+const PLAY_MS = +(args.play || 15000);
 // On third-party sites never submit forms, buy, sign up, log in, download or accept consent.
 const REMOTE = !!args.url && !/^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(:|\/|$)/i.test(args.url);
 const RISKY = /(구매|결제|주문|장바구니|담기|cart|buy|checkout|order|pay|subscribe|구독|sign ?up|가입|회원|log ?in|로그인|delete|삭제|accept|agree|동의|수락|허용|allow|cookie|쿠키|download|다운로드|설치|install|신청|예약|book)/i;
@@ -514,47 +514,140 @@ async function canvasHash(page) {
   } catch { return null; }
 }
 
+// ---- gameplay: get past loading + menus, then play while capturing distinct frames
+const MENU_RX = /^(▶\s*)?(play|start|start game|new game|begin|continue|retry|try again|restart|tap to start|click to start|press start|press any key|ok|next|skip|level ?1|stage ?1|플레이|시작|게임 시작|시작하기|계속|계속하기|다시 시작|다시 하기|재시작|확인|다음|건너뛰기|스킵|1단계|스테이지 ?1)(\b|$|\s)/i;
+
+let THUMB_PAGE = null;
+// 32×18 grayscale thumbnail of the viewport — compares screens even when a menu idles with animation
+async function thumb(page, box) {
+  // compare the game area only: a small canvas on a big empty page would otherwise hide every change
+  const clip = box && box.w * box.h > 200 * 150 ? { x: Math.max(0, box.x - box.w / 2), y: Math.max(0, box.y - box.h / 2), width: box.w, height: box.h } : undefined;
+  try {
+    const b64 = (await page.screenshot({ type: 'jpeg', quality: 30, timeout: 3000, clip })).toString('base64');
+    // decode on a separate blank page so the game's own draw-call and audio counters stay untouched
+    if (!THUMB_PAGE || THUMB_PAGE.isClosed()) THUMB_PAGE = await page.context().newPage();
+    return await THUMB_PAGE.evaluate(async s => {
+      const bin = atob(s), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      const bm = await createImageBitmap(new Blob([u], { type: 'image/jpeg' }));
+      const c = document.createElement('canvas'); c.width = 32; c.height = 18;
+      const x = c.getContext('2d'); x.drawImage(bm, 0, 0, 32, 18);
+      const d = x.getImageData(0, 0, 32, 18).data, g = [];
+      for (let i = 0; i < d.length; i += 4) g.push(Math.round(d[i] * 0.3 + d[i + 1] * 0.59 + d[i + 2] * 0.11));
+      return g;
+    }, b64);
+  } catch { return null; }
+}
+const tdiff = (a, b) => { if (!a || !b || a.length !== b.length) return 1; let s = 0; for (let i = 0; i < a.length; i++) s += Math.abs(a[i] - b[i]); return s / a.length / 255; };
+const SCENE_CHANGE = 0.08;
+
+async function waitReady(page) {
+  // engine loaders (Unity #unity-loading-bar, Godot #status-progress, custom "loading…") must finish before input means anything
+  const t = Date.now();
+  while (Date.now() - t < 20000) {
+    const busy = await page.evaluate(() => {
+      const vis = el => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 2 && r.height > 2 && s.visibility !== 'hidden' && s.display !== 'none' && parseFloat(s.opacity) > 0.05; };
+      const els = [...document.querySelectorAll('[id*=loading i],[class*=loading i],[id*=loader i],[class*=loader i],#status-progress')];
+      return els.some(vis) || /^\s*(loading|로딩)/i.test(document.body?.innerText || '');
+    }).catch(() => false);
+    if (!busy) break;
+    await page.waitForTimeout(500);
+  }
+  return Date.now() - t;
+}
+
+// one attempt to move past the current screen (title, menu, dialog, game over).
+// Returns the input that visibly changed the screen, or null when nothing did.
+async function menuStep(page, box) {
+  const W = box ? box.w : 1440, H = box ? box.h : 900, X0 = box ? box.x - W / 2 : 0, Y0 = box ? box.y - H / 2 : 0;
+  const base = await thumb(page, box);
+  const tries = [
+    async () => {
+      const label = await page.evaluate(({ src, risky }) => {
+        const rx = new RegExp(src, 'i'), rk = new RegExp(risky, 'i');
+        const vis = el => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 4 && r.height > 4 && s.visibility !== 'hidden' && s.display !== 'none'; };
+        const el = [...document.querySelectorAll('button,[role=button],a,input[type=button]')].filter(vis)
+          .find(b => { const t = String(b.innerText ?? b.textContent ?? b.value ?? '').trim(); return rx.test(t) && !rk.test(t); });
+        if (!el) return null; el.setAttribute('data-sl-start', '1'); return String(el.innerText ?? el.textContent ?? el.value).trim().slice(0, 30);
+      }, { src: MENU_RX.source, risky: RISKY.source }).catch(() => null);
+      if (!label) return null;
+      await page.click('[data-sl-start="1"]', { timeout: 2000 }).catch(() => {});
+      await page.evaluate(() => document.querySelectorAll('[data-sl-start]').forEach(e => e.removeAttribute('data-sl-start'))).catch(() => {});
+      return '버튼 "' + label + '"';
+    },
+    // focus the game with a click on an empty corner (a centre click may hit a side menu such as ENDINGS), then the default action
+    async () => { await page.mouse.click(X0 + W * 0.03, Y0 + H * 0.04); await page.waitForTimeout(250); await page.keyboard.press('Enter'); return '구석 클릭(포커스)+Enter'; },
+    async () => { await page.keyboard.press('Space'); return 'Space'; },
+    async () => { await page.mouse.click(X0 + W / 2, Y0 + H / 2); return '가운데 클릭'; },
+    async () => { await page.mouse.click(X0 + W / 2, Y0 + H * 0.64); return '가운데 아래 클릭'; },
+    async () => { await page.mouse.click(X0 + W / 2, Y0 + H * 0.78); return '하단 클릭'; },
+    async () => { await page.keyboard.press('ArrowDown'); await page.keyboard.press('ArrowUp'); await page.keyboard.press('Enter'); return '방향키 선택+Enter'; },
+    async () => { await page.keyboard.press('KeyZ'); await page.keyboard.press('KeyJ'); return 'Z/J'; },
+  ];
+  for (const act of tries) {
+    let name = null;
+    try { name = await act(); } catch { name = null; }
+    if (!name) continue;
+    await page.waitForTimeout(900);
+    if (tdiff(base, await thumb(page, box)) > SCENE_CHANGE) return name;
+  }
+  return null;
+}
+
 async function playGame(page, out) {
   const g = { navigations: 0, played_ms: 0 };
   const onNav = f => { if (f === page.mainFrame()) g.navigations++; };
   page.on('framenavigated', onNav);
+  g.loadWaitMs = await waitReady(page);
   const h0 = await canvasHash(page); await page.waitForTimeout(900); const h1 = await canvasHash(page);
   g.animatesIdle = !!(h0 && h1 && h0 !== h1);
   g.hasCanvas = await page.evaluate(() => [...document.querySelectorAll('canvas')].some(c => { const r = c.getBoundingClientRect(); return r.width * r.height > innerWidth * innerHeight * 0.25; })).catch(() => false);
   out.screenshots.game.push(await shot(page, 'game-0-start'));
   const box = await page.evaluate(() => { const c = document.querySelector('canvas'); if (!c) return null; const r = c.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2, w: r.width, h: r.height }; });
   const cx = box ? box.x : 640, cy = box ? box.y : 360;
-  // Many games start from an HTML button (title → level select …). Press visible start-like buttons first.
-  g.startClicks = [];
-  for (let k = 0; k < 3; k++) {
-    const label = await page.evaluate(() => {
-      const rx = /^(▶\s*)?(play|start|start game|new game|continue|retry|tap to start|press start|level ?1|stage ?1|플레이|시작|게임 시작|시작하기|계속|다시 시작|1단계|스테이지 ?1)\b/i;
-      const vis = el => { const r = el.getBoundingClientRect(); const s = getComputedStyle(el); return r.width > 4 && r.height > 4 && s.visibility !== 'hidden' && s.display !== 'none'; };
-      const el = [...document.querySelectorAll('button,[role=button],a,input[type=button]')].filter(vis)
-        .find(b => rx.test(String(b.innerText ?? b.textContent ?? b.value ?? '').trim()));
-      if (!el) return null; el.setAttribute('data-sl-start', '1'); return String(el.innerText ?? el.textContent ?? el.value).trim().slice(0, 30);
-    }).catch(() => null);
-    if (!label) break;
-    try { await page.click('[data-sl-start="1"]', { timeout: 2000 }); g.startClicks.push(label); } catch { break; }
-    await page.evaluate(() => document.querySelectorAll('[data-sl-start]').forEach(e => e.removeAttribute('data-sl-start'))).catch(() => {});
-    await page.waitForTimeout(900);
+  // title → menu → level select …: keep stepping while some input visibly changes the screen
+  g.menuSteps = []; g.startClicks = [];
+  const menuStart = Date.now();
+  while (g.menuSteps.length < 5 && Date.now() - menuStart < 20000 && !overBudget()) {
+    const step = await menuStep(page, box);
+    if (!step) break;
+    g.menuSteps.push(step);
+    if (step.startsWith('버튼')) g.startClicks.push(step.slice(4, -1));
+    if (g.menuSteps.length <= 3) out.screenshots.game.push(await shot(page, `game-m${g.menuSteps.length}-menu`));
   }
-  try { await page.mouse.click(cx, cy); await page.keyboard.press('Enter'); await page.keyboard.press('Space'); } catch {}
   const R = rng(42), keys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space', 'KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyZ', 'KeyX', 'KeyJ', 'Enter'];
   await page.evaluate(() => { if (window.__sl) window.__sl.rec.on = true; }).catch(() => {});
-  const start = Date.now(); let i = 0, mid = false;
+  const start = Date.now();
+  let i = 0, nextShot = 1, lastShot = await canvasHash(page), lastCheck = lastShot, checkAt = start + 3000, still = 0;
+  g.recoveries = []; g.skippedSameFrames = 0;
+  const navBeforePlay = g.navigations;
   const hBefore = await canvasHash(page);
+  let seenChange = false;  // any frame during play that differs from the first (a reload at the end must not hide it)
+  const saw = h => { if (h && hBefore && h !== hBefore) seenChange = true; return h; };
   while (Date.now() - start < PLAY_MS) {
     const k = keys[Math.floor(R() * keys.length)];
-    try { await page.keyboard.down(k); await page.waitForTimeout(100 + R() * 260); await page.keyboard.up(k);
+    try { await page.keyboard.down(k); await page.waitForTimeout(120 + R() * 380); await page.keyboard.up(k);
       if (i % 4 === 0 && box) await page.mouse.click(cx + (R() - 0.5) * box.w * 0.6, cy + (R() - 0.5) * box.h * 0.6); } catch {}
-    if (!mid && Date.now() - start > PLAY_MS * 0.45) { out.screenshots.game.push(await shot(page, 'game-1-mid')); mid = true; }
+    const el = Date.now() - start;
+    if (nextShot <= 4 && el > PLAY_MS * nextShot / 5) {
+      // only keep frames that show something new
+      const t = saw(await canvasHash(page));
+      if (!t || t !== lastShot) { out.screenshots.game.push(await shot(page, `game-p${nextShot}-play`)); lastShot = t; }
+      else g.skippedSameFrames++;
+      nextShot++;
+    }
+    if (Date.now() > checkAt) {
+      // a screen that ignores input for ~6s is a game over / pause / dialog: try to get past it
+      const t = saw(await canvasHash(page)); still = t && t === lastCheck ? still + 1 : 0; lastCheck = t; checkAt = Date.now() + 3000;
+      if (still >= 2 && g.recoveries.length < 3) { const step = await menuStep(page, box); if (step) g.recoveries.push(step); still = 0; }
+    }
     i++;
   }
   g.played_ms = Date.now() - start;
   const hAfter = await canvasHash(page);
-  g.changedDuringPlay = !!(hBefore && hAfter && hBefore !== hAfter);
-  out.screenshots.game.push(await shot(page, 'game-2-end'));
+  saw(hAfter);
+  g.changedDuringPlay = seenChange;
+  out.screenshots.game.push(await shot(page, 'game-9-end'));
+  if (THUMB_PAGE) { await THUMB_PAGE.close().catch(() => {}); THUMB_PAGE = null; }
   page.off('framenavigated', onNav);
   const s = await page.evaluate(() => window.__sl ? { raf: window.__sl.raf, intervals: window.__sl.intervals, audio: window.__sl.audio, dialogs: window.__sl.dialogs,
     draw: window.__sl.draw, emojiText: window.__sl.emojiText, alpha: window.__sl.alpha, shadows: window.__sl.shadows, small: window.__sl.small } : null).catch(() => null);
@@ -574,7 +667,8 @@ async function playGame(page, out) {
   }
   g.canvas = await canvasInfo(page).catch(() => null);
   g.uiTexts = await page.evaluate(TEXTS).catch(() => []);
-  g.sound = await page.evaluate(() => {
+  g.navDuringPlay = g.navigations - navBeforePlay;
+  g.sound = await safeEval(page, () => {
     const S = window.__sl; if (!S) return null;
     const snd = S.snd, osc = snd.osc;
     const types = {}; osc.forEach(o => { types[o.type] = (types[o.type] || 0) + 1; });
@@ -589,7 +683,7 @@ async function playGame(page, out) {
     return { oscillatorPlays: osc.length, oscillatorTypes: types, distinctSynthVoices: voices.slice(0, 20), samplePlays: snd.buffers,
       distinctSamples: snd.bufferKinds ? snd.bufferKinds.size : null, sampleRateVariety: rates.length, filters: snd.filters, reverbs: snd.convolvers, compressors: snd.compressors, distortion: snd.shapers,
       envelopeRamps: snd.ramps, mediaFiles: media.slice(0, 10), mediaPlays: snd.mediaPlays || 0, mix };
-  }).catch(() => null);
+  }).catch(() => null);  // a game-over reload can land mid-call: safeEval waits and retries
   return g;
 }
 

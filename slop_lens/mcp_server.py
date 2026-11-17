@@ -51,7 +51,9 @@ TOOLS = [
                        "사운드 분석 요약, 감각별(S1 첫인상 ~ S8 실체, C1 공들인 흔적) 답변 형식을 돌려줍니다. 시트 이미지를 실제로 열어 보고 답하세요. "
                        "AI 슬롭인지는 보이고 들리는 것으로 판단합니다.",
         "inputSchema": {"type": "object", "properties": {"scan_id": {"type": "string"},
-            "blind": {"type": "boolean", "default": False, "description": "true면 측정 결과를 숨긴 블라인드 프로토콜 (리뷰가 측정에 끌려가지 않게)"}},
+            "blind": {"type": "boolean", "default": False, "description": "true면 측정 결과를 숨긴 블라인드 프로토콜 (리뷰가 측정에 끌려가지 않게)"},
+            "attach": {"type": "array", "items": {"type": "string"},
+                       "description": "직접 찍은 스크린샷 경로 (자동 캡처가 못 본 화면). 원본 확인 목록에 추가됨"}},
             "required": ["scan_id"]},
     },
     {
@@ -67,6 +69,8 @@ TOOLS = [
                 "evidence": {"type": "string"}, "why": {"type": "string"}, "fix": {"type": "string"}}, "required": ["id", "level"]}},
             "frames": {"type": "array", "description": "프레임별 원본 확인 메모 [{file, note}]", "items": {"type": "object", "properties": {
                 "file": {"type": "string"}, "note": {"type": "string"}}, "required": ["file", "note"]}},
+            "attach": {"type": "array", "items": {"type": "string"},
+                       "description": "리뷰에 쓴, 직접 찍은 스크린샷 경로. frames 메모의 file에 절대 경로를 써도 자동 첨부됨"},
             "meta": {"type": "object", "description": "{reviewer, blind: 측정을 안 보고 리뷰했나, knew_expected: 기대 판정을 미리 알았나} → 신뢰도에 반영",
                      "properties": {"reviewer": {"type": "string"}, "blind": {"type": "boolean"}, "knew_expected": {"type": "boolean"}}},
             "format": {"type": "string", "enum": ["markdown", "json"], "default": "markdown"}},
@@ -198,10 +202,10 @@ def call_tool(name, args):
         return _text(report.to_markdown(res, max_findings=mf))
     if name == "slop_review_protocol":
         from .review import protocol_markdown
-        return _text(protocol_markdown(_get_scan(args.get("scan_id", "")), blind=bool(args.get("blind"))))
+        return _text(protocol_markdown(_get_scan(args.get("scan_id", "")), blind=bool(args.get("blind")), attach=args.get("attach")))
     if name == "slop_submit_review":
         res = _get_scan(args.get("scan_id", ""))
-        unknown = res.add_review(args.get("review") or [], args.get("frames"), args.get("meta"))
+        unknown = res.add_review(args.get("review") or [], args.get("frames"), args.get("meta"), attach=args.get("attach"))
         body = report.to_json(res) if args.get("format") == "json" else report.to_markdown(res, max_findings=15)
         if unknown:
             body = f"> 알 수 없는 항목 ID 무시: {', '.join(unknown)}\n\n" + body

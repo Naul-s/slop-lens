@@ -23,6 +23,7 @@ class ScanResult:
         self.visual_findings = []
         self.visual_answers = []  # (rule, value, note)  — legacy yes/no rubric
         self.review = []          # perception review items (see review.py)
+        self.attachments = []     # screenshots the reviewer took by hand (review.attach_images)
         self.errors = errors
         self.created = _dt.datetime.now().isoformat(timespec="seconds")
         h = hashlib.sha1(f"{ctx.target}|{self.created}".encode()).hexdigest()[:8]
@@ -98,8 +99,16 @@ class ScanResult:
                                              review_meta=getattr(self, "review_meta", None), agreement=self.agreement,
                                              frame_coverage=self.frame_coverage, index=self.index)
 
-    def add_review(self, items, frames=None, meta=None):
+    def attach(self, paths):
+        """Add hand-taken screenshots to the review material. Returns (added, rejected)."""
         from . import review as _rv
+        return _rv.attach_images(self, paths)
+
+    def add_review(self, items, frames=None, meta=None, attach=None):
+        from . import review as _rv
+        # frame notes that point at an image outside the capture are hand-taken screenshots too
+        self.attach(list(attach or []) + [f.get("file") for f in (frames or []) if isinstance(f, dict) and f.get("file")
+                                          and os.path.isabs(str(f["file"])) and os.path.isfile(str(f["file"]))])
         self.review, unknown = _rv.normalize(items, self.kind)
         self.frame_notes = _rv.normalize_frames(frames)
         self.review_meta = _rv.normalize_meta(meta)
@@ -203,6 +212,7 @@ class ScanResult:
             "slop_index": self.index, "status": self.status, "static_index": self.static_index, "visual_index": self.visual_index,
             "perception_index": self.perception_index, "craft": {"score": self.craft, "evidence": self.craft_evidence, "fingerprint_factor": self.fp_factor},
             "review": self.review, "frame_notes": getattr(self, "frame_notes", []), "review_meta": getattr(self, "review_meta", None),
+            "attachments": list(getattr(self, "attachments", []) or []),
             "agreement": self.agreement, "frame_coverage": self.frame_coverage,
             "visual_blend": self.visual_blend, "convergence_bonus": self.convergence_bonus,
             "verdict": self.verdict, "axes": self.axes, "confidence": self.confidence,

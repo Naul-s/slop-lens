@@ -100,7 +100,8 @@ def to_markdown(res, max_findings=20, include_plan=True, include_brief=True):
                  + (f" · 리뷰어 {rm['reviewer']}" if rm.get("reviewer") else "")
                  + (" · 블라인드 리뷰" if rm.get("blind") else
                     " · 블라인드로 제출됐지만 측정이 먼저 공개돼 블라인드 아님으로 처리" if rm.get("blind_overridden") else " · 측정을 본 뒤 리뷰")
-                 + (" · **리뷰어가 기대 판정을 알고 있었음(독립 판정 아님)**" if rm.get("knew_expected") else ""))
+                 + (" · **리뷰어가 기대 판정을 알고 있었음(독립 판정 아님)**" if rm.get("knew_expected") else "")
+                 + (f" · 직접 첨부한 화면 {len(d['attachments'])}장 포함" if d.get("attachments") else ""))
         if ag and ag.get("conflict"):
             L.append(">")
             L.append(f"> ⚠ **리뷰와 측정이 {abs(ag['gap']):.0f}점 차이**납니다. 어느 한쪽이 틀렸을 수 있으니 아래 근거를 직접 확인하세요.")
@@ -258,8 +259,11 @@ def blind_summary(res, as_json=False):
         "play_reached": play_reached(ctx),
         "sound_recorded": bool(((r or {}).get("game") or {}).get("sound")) or bool((getattr(ctx, "unity", None) or {}).get("capture")),
     }
+    from .review import autoplay_lines
+    route = autoplay_lines(((r or {}).get("game")) or None)
+    captured["autoplay"] = [x[2:] for x in route]
     nxt = [f"slop_review_protocol {{scan_id: \"{res.id}\", blind: true}} 로 리뷰 자료를 받는다 (CLI: scan <대상> --protocol --blind)",
-           "원본 프레임을 한 장씩 열어 보고 감각별로 답한다",
+           "원본 프레임을 한 장씩 열어 보고 감각별로 답한다. 자동 캡처가 못 본 화면은 직접 찍어 attach로 추가한다",
            f"slop_submit_review {{scan_id: \"{res.id}\", ..., meta: {{blind: true}}}} 로 제출하면 판정과 측정 결과가 함께 공개된다"]
     if as_json:
         return json.dumps({"tool": "SlopLens", "scan_id": res.id, "target": res.ctx.target, "kind": "game", "blind": True,
@@ -275,8 +279,8 @@ def blind_summary(res, as_json=False):
          "**측정 결과(의심 규칙·점수)는 리뷰가 거기에 끌려가지 않도록 리뷰를 제출할 때까지 숨깁니다.**", "",
          "## 수집한 자료",
          f"- 실제 브라우저 실행: {yn(captured['rendered'])} · 스크린샷 {captured['screenshots']}장 · 화면 시트: {yn(captured['frame_sheet'])}",
-         f"- 자동 플레이가 게임 화면까지 도달: {yn(captured['play_reached'])} · 소리 기록: {yn(captured['sound_recorded'])}",
-         "", "## 다음 단계"] + [f"{i}. {s}" for i, s in enumerate(nxt, 1)] + [
+         f"- 자동 플레이가 게임 화면까지 도달: {yn(captured['play_reached'])} · 소리 기록: {yn(captured['sound_recorded'])}"]
+    L += route + ["", "## 다음 단계"] + [f"{i}. {s}" for i, s in enumerate(nxt, 1)] + [
          "", "> 측정 결과를 지금 보려면 `reveal: true`(CLI `--reveal`)로 다시 요청하세요. 그 뒤의 리뷰는 블라인드가 아닌 것으로 기록됩니다."]
     return "\n".join(L)
 

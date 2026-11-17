@@ -48,7 +48,68 @@ def review_frames(res):
     cap = (getattr(ctx, "unity", None) or {}).get("capture") or {}
     sh = (r or {}).get("screenshots") or {}
     frames = [sh[k] for k in ("desktop", "mobile") if sh.get(k)] + list(sh.get("game") or []) + list(cap.get("frames") or [])
-    return frames + [x["file"] for x in (p.get("slices") or [])]
+    return frames + [x["file"] for x in (p.get("slices") or [])] + list(getattr(res, "attachments", None) or [])
+
+
+IMAGE_EXT = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp")
+MAX_ATTACH = 20
+
+
+def attach_images(res, paths):
+    """Hand-taken screenshots (a boss fight, an ending, a menu the autoplay never reached) join the review material.
+    Returns (added, rejected[(path, reason)])."""
+    if not hasattr(res, "attachments") or res.attachments is None:
+        res.attachments = []
+    have = {os.path.normcase(os.path.abspath(f)) for f in review_frames(res) if f}
+    added, rejected = [], []
+    for raw in paths or []:
+        p = os.path.abspath(os.path.expanduser(str(raw or "").strip().strip('"')))
+        if not raw or not str(raw).strip():
+            continue
+        if not os.path.isfile(p):
+            rejected.append((str(raw), "파일 없음"))
+        elif not p.lower().endswith(IMAGE_EXT):
+            rejected.append((str(raw), "이미지 파일 아님"))
+        elif os.path.normcase(p) in have:
+            continue
+        elif len(res.attachments) >= MAX_ATTACH:
+            rejected.append((str(raw), f"최대 {MAX_ATTACH}장"))
+        else:
+            res.attachments.append(p)
+            have.add(os.path.normcase(p))
+            added.append(p)
+    return added, rejected
+
+
+def autoplay_lines(g):
+    """How far the automated play got — so the reviewer can tell capture limits from game defects. No verdict hints."""
+    if not g:
+        return []
+    L = []
+    if g.get("loadWaitMs"):
+        L.append(f"- 로딩 대기 {g['loadWaitMs'] / 1000:.1f}초")
+    steps = g.get("menuSteps")
+    if steps is not None:
+        L.append("- 메뉴 넘기기: " + (" → ".join(steps) if steps else "화면을 바꾼 입력 없음 (처음부터 플레이 화면이었거나, 자동 입력으로 메뉴를 못 넘김)"))
+    if g.get("played_ms"):
+        L.append(f"- 무작위 입력으로 {g['played_ms'] / 1000:.0f}초 플레이" + (f", 멈춘 화면 넘기기 {' / '.join(g['recoveries'])}" if g.get("recoveries") else "")
+                 + (f", 변화 없는 프레임 {g['skippedSameFrames']}장 생략" if g.get("skippedSameFrames") else ""))
+    return L
+
+
+def sound_line(snd):
+    """Web runtime sound usage in plain counts (synth voices, distinct samples, media files)."""
+    voices = snd.get("distinctSynthVoices") or []
+    media = snd.get("mediaFiles") or []
+    parts = [f"오실레이터 {snd.get('oscillatorPlays') or 0}회" + (f" {snd.get('oscillatorTypes')}" if snd.get("oscillatorPlays") else ""),
+             f"신스 음색 {len(voices)}종" + (f" ({', '.join(map(str, voices[:6]))})" if voices else ""),
+             f"샘플 재생 {snd.get('samplePlays') or 0}회" + (f" · 서로 다른 샘플 {snd['distinctSamples']}종" if snd.get("distinctSamples") is not None else ""),
+             f"미디어 파일 {len(media)}개" + (f" (재생 {snd.get('mediaPlays')}회)" if snd.get("mediaPlays") else ""),
+             f"필터 {snd.get('filters') or 0} · 리버브 {snd.get('reverbs') or 0}"]
+    mix = snd.get("mix") or {}
+    if mix.get("duration"):
+        parts.append(f"녹음 {mix['duration']}s" + (f" · 무음 {mix['silenceShare']}" if mix.get("silenceShare") is not None else ""))
+    return "- 웹 런타임: " + ", ".join(parts)
 
 
 def normalize_meta(meta):
@@ -57,13 +118,15 @@ def normalize_meta(meta):
             "knew_expected": bool(m.get("knew_expected", False))}
 
 
-def protocol_markdown(res, blind=False):
+def protocol_markdown(res, blind=False, attach=None):
     """What the reviewing agent should look at, and how to answer.
-    blind=True hides every measured interpretation so the reviewer judges from the screens first (no anchoring)."""
+    blind=True hides every measured interpretation so the reviewer judges from the screens first (no anchoring).
+    attach: hand-taken screenshots to add to the review material."""
     ctx = res.ctx
     kind = ctx.kind
     if not blind:
         res.revealed = True  # the non-blind protocol lists the measured suspicions
+    _, rejected = attach_images(res, attach) if attach else ([], [])
     p = getattr(ctx, "perception", None) or {}
     r = ctx.render if ctx.render and ctx.render.get("ok") else {}
     cap = (getattr(ctx, "unity", None) or {}).get("capture") or {}
@@ -85,15 +148,22 @@ def protocol_markdown(res, blind=False):
     sh = (r or {}).get("screenshots") or {}
     frames = [sh[k] for k in ("desktop", "mobile") if sh.get(k)] + list(sh.get("game") or []) + list(cap.get("frames") or [])
     slices = [x["file"] for x in (p.get("slices") or [])]
+    att = list(getattr(res, "attachments", None) or [])
     fmeta = {os.path.basename(f.get("file", "")): f for f in (p.get("frames") or [])}
     L.append("")
-    L.append(f"**원본 확인 목록 ({len(frames) + len(slices)}장)**")
-    for i, f in enumerate(frames + slices, 1):
+    L.append(f"**원본 확인 목록 ({len(frames) + len(slices) + len(att)}장)**")
+    for i, f in enumerate(frames + slices + att, 1):
         m = fmeta.get(os.path.basename(f), {})
         size = f" · {m.get('w')}×{m.get('h')}" if m.get("w") else ""
-        L.append(f"{i}. [ ] `{f}`{size}")
-    if not frames and not slices:
-        L.append("- (자동 수집된 화면이 없습니다 — 직접 스크린샷을 찍어 판단하세요)")
+        L.append(f"{i}. [ ] `{f}`{size}" + (" · 직접 첨부" if f in att else ""))
+    if not frames and not slices and not att:
+        L.append("- (자동 수집된 화면이 없습니다 — 직접 스크린샷을 찍어 `attach`로 첨부한 뒤 판단하세요)")
+    for f, why in rejected:
+        L.append(f"- 첨부 못 함: `{f}` ({why})")
+    L += ["", "> 자동 캡처가 못 본 화면(후반 스테이지, 보스, 엔딩, 설정 메뉴 등)은 직접 찍어 `attach: [경로…]`(CLI `--attach`)로 추가할 수 있습니다."]
+    ap = autoplay_lines(((r or {}).get("game")) or None)
+    if ap:
+        L += ["", "**자동 플레이가 간 길** (캡처 한계와 게임 결함을 구분하는 데 쓰세요)"] + ap
     texts = getattr(ctx, "screen_texts", None) or []
     if texts:
         L += ["", f"**화면에 보이는 문구 {len(texts)}개** (원본 프레임과 대조해 쓸데없는 문구·상투 문구·개발용 문구를 확인)"]
@@ -101,8 +171,7 @@ def protocol_markdown(res, blind=False):
     L += ["", "## 2. 들을 자료 (측정 요약)"]
     snd = ((r or {}).get("game") or {}).get("sound")
     if snd:
-        L.append(f"- 웹 런타임: 오실레이터 {snd.get('oscillatorPlays')}회 {snd.get('oscillatorTypes')}, 샘플 {snd.get('samplePlays')}회, "
-                 f"필터 {snd.get('filters')} · 리버브 {snd.get('reverbs')}, 음색 종류 {snd.get('distinctSynthVoices')}")
+        L.append(sound_line(snd))
     if cap.get("soundEvents") is not None:
         ev = cap.get("soundEvents") or []
         clips = {}
@@ -137,6 +206,7 @@ def protocol_markdown(res, blind=False):
     L += [f'    {{"id": "{sid}", "level": 2, "evidence": "어떤 시트/프레임/에셋의 어디", "why": "사람이 왜 그렇게 느끼는지", "fix": "가장 효과적인 해결"}},' for sid, *_ in senses]
     L += [f'    {{"id": "C1", "level": 1, "evidence": "공들인 디테일 예시"}}', "  ],",
           '  "frames": [', '    {"file": "프레임 파일명", "note": "이 화면에서 실제로 보이는 것 (글자·색·빈칸·어색한 점·공들인 점)"}', "  ],",
+          '  "attach": [],',
           '  "meta": {"reviewer": "리뷰어 이름/모델", "blind": ' + ("true" if blind else "false") + ', "knew_expected": false}', "}", "```",
           "", "`knew_expected`: 리뷰 전에 이 작품이 슬롭인지 아닌지(제작자·사용자 판단)를 알고 있었다면 true. 리포트의 신뢰도에 반영됩니다."]
     return "\n".join(L)

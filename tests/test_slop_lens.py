@@ -107,6 +107,50 @@ class BlindGameFlow(unittest.TestCase):
         self.assertIsNone(vis_hex(unity))
 
 
+class ReviewMaterial(unittest.TestCase):
+    """Hand-taken screenshots join the review; the protocol says how far autoplay got and what the sound was."""
+
+    def test_attached_screenshots_are_listed_and_counted(self):
+        import tempfile
+        from slop_lens.review import protocol_markdown, review_frames
+        r = s("crafted-game", render="off")
+        d = tempfile.mkdtemp()
+        boss, ending, txt = (os.path.join(d, n) for n in ("boss.png", "ending.jpg", "notes.txt"))
+        for p in (boss, ending, txt):
+            with open(p, "wb") as f:
+                f.write(b"x")
+        out = protocol_markdown(r, blind=True, attach=[boss, txt, os.path.join(d, "missing.png"), boss])
+        self.assertEqual(r.attachments, [os.path.abspath(boss)])
+        self.assertIn("직접 첨부", out)
+        self.assertIn("이미지 파일 아님", out)
+        self.assertIn("파일 없음", out)
+        # a frame note with an absolute path attaches that screenshot too, and counts toward coverage
+        r.add_review([{"id": "S1", "level": 1}], frames=[{"file": ending, "note": "엔딩 화면"}, {"file": boss, "note": "보스"}],
+                     meta={"blind": True})
+        self.assertIn(os.path.abspath(ending), review_frames(r))
+        self.assertEqual(len(r.to_dict()["attachments"]), 2)
+        from slop_lens import report
+        self.assertIn("직접 첨부한 화면 2장", report.to_markdown(r))
+
+    def test_sound_line_names_distinct_samples(self):
+        from slop_lens.review import sound_line
+        line = sound_line({"oscillatorPlays": 0, "distinctSynthVoices": [], "samplePlays": 36, "distinctSamples": 8,
+                           "mediaFiles": [], "filters": 0, "reverbs": 0, "mix": {"duration": 15.2, "silenceShare": 0.31}})
+        self.assertIn("서로 다른 샘플 8종", line)
+        self.assertIn("신스 음색 0종", line)
+        self.assertNotIn("[]", line)
+
+    def test_autoplay_route_is_reported(self):
+        from slop_lens.review import autoplay_lines
+        g = {"loadWaitMs": 4200, "menuSteps": ['버튼 "Start"', "Space"], "played_ms": 15000, "recoveries": ["가운데 클릭+Enter"]}
+        text = "\n".join(autoplay_lines(g))
+        self.assertIn('버튼 "Start" → Space', text)
+        self.assertIn("15초", text)
+        self.assertIn("멈춘 화면 넘기기", text)
+        self.assertIn("못 넘김", "\n".join(autoplay_lines({"menuSteps": []})))
+        self.assertEqual(autoplay_lines(None), [])
+
+
 class StaticCalibration(unittest.TestCase):
     """Without a browser the detector must still separate obvious slop from crafted work."""
 
@@ -179,8 +223,11 @@ class RenderCalibration(unittest.TestCase):
         web, game = ids(self.r["sloppy-landing"]), ids(self.r["sloppy-game"])
         for rid in ["RND-01", "RND-14", "RND-10", "RND-12"]:
             self.assertIn(rid, web, rid)
+        g = self.r["sloppy-game"].ctx.render.get("game") or {}
+        dbg = {k: g.get(k) for k in ("changedDuringPlay", "navigations", "navDuringPlay", "played_ms", "menuSteps")}
+        dbg["sound"] = g.get("sound") is not None
         for rid in ["AUD-03", "RND-G3", "RND-G4", "RND-G7"]:  # no-sound is judged once, by AUD-03 (RND-G2 defers to it)
-            self.assertIn(rid, game, rid)
+            self.assertIn(rid, game, (rid, dbg))
         self.assertNotIn("VIS-01", web)  # superseded by RND-01
 
     def test_js_handled_links_not_dead(self):
