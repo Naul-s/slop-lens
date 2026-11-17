@@ -15,30 +15,49 @@ An agent plugin & skill that finds **why an AI-made website or game feels like "
 
 ## Install
 
-```bash
-git clone https://github.com/Naul-s/slop-lens.git
-cd slop-lens
-npm install --prefix probe   # optional: measure the rendered page in a real browser (Node 18+)
+Requires Python 3.9+. This repository is its own plugin marketplace (`slop-lens`); it is not listed in Anthropic's official marketplace yet.
+
+**Claude Code — terminal · VS Code**
+
+```text
+/plugin marketplace add Naul-s/slop-lens
+/plugin install slop-lens@slop-lens
 ```
 
-Only Python 3.9+ is required.
+Or from your shell in one step:
+
+```bash
+claude plugin install slop-lens --marketplace Naul-s/slop-lens
+```
+
+**Claude desktop app — Code tab**
+
+1. Add the marketplace once with the shell command above. The terminal, VS Code and the desktop app share the same plugin settings.
+2. In the Code tab, click **+** next to the prompt box → **Add plugins** (or **Plugins → Browse plugins**) → select **slop-lens**.
+
+**Other agents (MCP)** — clone the repo first: `git clone https://github.com/Naul-s/slop-lens.git`
+
+| Agent | Setup |
+|---|---|
+| Claude desktop app — Chat tab | Settings → Developer → Edit Config, paste [`integrations/generic/mcp.json`](integrations/generic/mcp.json), restart |
+| Gemini CLI | `gemini extensions install https://github.com/Naul-s/slop-lens` |
+| Codex CLI | `codex mcp add slop-lens -- python <path>/bin/slop-lens-mcp.py` |
+| Cursor · VS Code · Windsurf, etc. | `mcp.json` in [`integrations/`](integrations) |
+
+Replace `/ABS/PATH` or `<path>` with the folder you cloned into.
+Optional: `npm install --prefix probe` (Node 18+) to measure the rendered page in a real browser.
 
 ## Usage
+
+Inside an agent, just ask: **"Does this look like AI slop?"**
+
+Or run it directly:
 
 ```bash
 python bin/slop-lens.py scan ./my-site              # folder
 python bin/slop-lens.py scan http://localhost:5173  # URL
 python bin/slop-lens.py scan ./my-game --kind game  # game
 ```
-
-Inside an agent, just ask: **"Does this look like AI slop?"**
-
-| Agent | Setup |
-|---|---|
-| Claude Code | `/plugin marketplace add Naul-s/slop-lens` → `/plugin install slop-lens@slop-lens` |
-| Gemini CLI | `gemini extensions install https://github.com/Naul-s/slop-lens` |
-| Codex CLI | `codex mcp add slop-lens -- python <path>/bin/slop-lens-mcp.py` |
-| Cursor · VS Code, etc. | `mcp.json` in [`integrations/`](integrations) |
 
 ## How far can you trust it?
 
@@ -77,7 +96,17 @@ AI로 만든 웹사이트·게임이 **왜 "AI 슬롭"처럼 보이는지** 찾�
 - **근거** — 각 지적마다 파일 위치·화면·측정값을 함께 보여줍니다.
 - **해결** — 무엇부터 고치면 좋은지 순서와 방법을 제안합니다.
 
-**설치·사용** — 위의 [Install](#install) · [Usage](#usage) 명령을 그대로 쓰면 됩니다. 에이전트 안에서는 **"이거 AI 슬롭처럼 보이는지 봐줘"** 라고 말하면 됩니다.
+**설치** — Python 3.9+가 필요합니다. 이 리포 자체가 플러그인 마켓플레이스(`slop-lens`)이며, Anthropic 공식 마켓플레이스에는 아직 등록되어 있지 않습니다.
+
+- **Claude Code (터미널 · VS Code)** — 세션에서 `/plugin marketplace add Naul-s/slop-lens` → `/plugin install slop-lens@slop-lens`
+  또는 셸에서 한 번에: `claude plugin install slop-lens --marketplace Naul-s/slop-lens`
+- **Claude 데스크탑 앱 (Code 탭)**
+  1. 위 셸 명령으로 마켓플레이스를 한 번 추가합니다. 터미널·VS Code·데스크탑 앱은 같은 플러그인 설정을 씁니다.
+  2. Code 탭 입력창 옆 **+** → **Add plugins** (또는 **Plugins → Browse plugins**) → **slop-lens** 선택
+- **Claude 데스크탑 앱 (Chat 탭)** — 리포를 클론한 뒤 설정 → 개발자 → 구성 편집에서 [`integrations/generic/mcp.json`](integrations/generic/mcp.json) 내용을 붙여 넣고 앱을 다시 시작합니다.
+- **Gemini · Codex · Cursor 등** — 위 [Install](#install) 표를 참고하세요.
+
+**사용** — 에이전트 안에서 **"이거 AI 슬롭처럼 보이는지 봐줘"** 라고 말하면 됩니다. 직접 실행하려면 위 [Usage](#usage) 명령을 쓰세요.
 
 **얼마나 믿어도 되나요**
 
