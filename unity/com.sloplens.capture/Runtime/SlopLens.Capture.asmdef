@@ -1,0 +1,10 @@
+{
+  "name": "SlopLens.Capture",
+  "rootNamespace": "SlopLens.Capture",
+  "references": ["Unity.TextMeshPro", "UnityEngine.UI"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": false,
+  "noEngineReferences": false
+}

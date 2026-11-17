@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+venv/
+
+# Node probe
+probe/node_modules/
+
+# Scan outputs (screenshots, reports, captures) — never commit other people's pages or private projects
+.slop-lens/
+SlopLensCapture/
+SlopLensBuild/
+shots/
+reports/
+*.report.md
+*.report.html
+
+# Validation data: private projects, third-party screenshots, per-creator verdicts.
+# Only the method and a template are public.
+validation/*
+!validation/README.md
+!validation/targets.example.json
+
+# Misc
+*.log
+.env
+.env.*
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

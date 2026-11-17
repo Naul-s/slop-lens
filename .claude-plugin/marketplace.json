@@ -1,0 +1,14 @@
+{
+  "name": "slop-lens",
+  "owner": {
+    "name": "SlopLens contributors"
+  },
+  "plugins": [
+    {
+      "name": "slop-lens",
+      "source": "./",
+      "description": "Reference plugin & skill that explains why AI-made websites and games may feel like AI slop, with evidence and suggested fixes. Not an authoritative AI-slop detector.",
+      "version": "0.4.0"
+    }
+  ]
+}

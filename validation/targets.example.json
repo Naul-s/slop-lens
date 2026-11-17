@@ -1,0 +1,6 @@
+[
+ {"name": "human-site-govuk", "group": "human-site", "label": "human", "kind": "web", "target": "https://www.gov.uk/", "source": "정부 디자인 시스템"},
+ {"name": "human-game-2048", "group": "human-game", "label": "human", "kind": "game", "target": "https://play2048.co/", "source": "2014, LLM 이전"},
+ {"name": "my-ai-site", "group": "ai-site", "label": "ai", "kind": "web", "target": "http://localhost:5173", "source": "AI 빌더로 만든 내 사이트"},
+ {"name": "my-ai-game", "group": "ai-game", "label": "ai", "kind": "game", "target": "./path/to/game-build", "source": "AI로 만든 내 게임 빌드 폴더"}
+]

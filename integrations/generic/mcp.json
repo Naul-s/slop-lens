@@ -1,0 +1,9 @@
+{
+  "_comment": "Claude Desktop, Windsurf, Cline, Zed, Goose, LM Studio 등 mcpServers 형식을 쓰는 모든 클라이언트",
+  "mcpServers": {
+    "slop-lens": {
+      "command": "python",
+      "args": ["/ABS/PATH/slop-lens/bin/slop-lens-mcp.py"]
+    }
+  }
+}

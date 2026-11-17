@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>도서관 좌석 현황 — 3층 열람실</title>
+  <meta name="description" content="3층 열람실 좌석을 구역별로 보여주는 내부용 대시보드">
+  <link rel="icon" href="data:,">
+  <style>
+    :root { --ink: #1f2a2e; --paper: #f4f6f2; --line: #cfd8d2; --go: #2f6f4e; }
+    body { margin: 0; font: 16px/1.6 'Pretendard', system-ui, sans-serif; color: var(--ink); background: var(--paper); }
+    main { max-width: 40rem; margin: 0 auto; padding: 1.5rem 1rem; }
+    .tabs a { display: inline-block; padding: .6rem .9rem; color: var(--ink); }
+    .tabs a[aria-selected="true"] { border-bottom: 3px solid var(--go); }
+    .zone[hidden] { display: none; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>3층 열람실 좌석</h1>
+    <p>5분마다 출입 게이트 기록으로 갱신됩니다. 마지막 갱신 14:05.</p>
+    <nav class="tabs" role="tablist">
+      <a href="#" role="tab" data-zone="a" aria-selected="true">A구역 (창가)</a>
+      <a href="#" role="tab" data-zone="b" aria-selected="false">B구역 (노트북)</a>
+      <a href="#" role="tab" data-zone="c" aria-selected="false">C구역 (조용히)</a>
+    </nav>
+    <section class="zone" id="zone-a"><p>남은 좌석 4 / 28 — 오후 3시 이후 볕이 강합니다.</p></section>
+    <section class="zone" id="zone-b" hidden><p>남은 좌석 11 / 40 — 콘센트는 짝수 번호 좌석에만 있습니다.</p></section>
+    <section class="zone" id="zone-c" hidden><p>남은 좌석 2 / 16 — 키보드 사용 불가 구역입니다.</p></section>
+  </main>
+  <script>
+    document.querySelectorAll('.tabs a').forEach(tab => tab.addEventListener('click', e => {
+      e.preventDefault();
+      document.querySelectorAll('.tabs a').forEach(t => t.setAttribute('aria-selected', t === tab));
+      document.querySelectorAll('.zone').forEach(z => z.hidden = z.id !== 'zone-' + tab.dataset.zone);
+    }));
+  </script>
+</body>
+</html>

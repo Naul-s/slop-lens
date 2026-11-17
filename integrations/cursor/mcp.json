@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "slop-lens": {
+      "command": "python",
+      "args": ["/ABS/PATH/slop-lens/bin/slop-lens-mcp.py"]
+    }
+  }
+}

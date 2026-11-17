@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>오탐 회귀 샘플 — 실제 사이트 검증에서 발견된 오판 모음</title>
+  <meta name="description" content="SlopLens가 실제 사이트에서 잘못 잡았던 패턴을 모아 둔 테스트 페이지">
+  <meta property="og:title" content="오탐 회귀 샘플">
+  <link rel="icon" href="data:,">
+  <style>
+    :root { --ink: #1d1a16; --paper: #f6f1e7; }
+    body { margin: 0; font: 16px/1.6 'Pretendard', serif; color: var(--ink); background: var(--paper); }
+    main { max-width: 40rem; margin: 0 auto; padding: 2rem 1rem; }
+    /* single-hue reveal animation (실제 개인 사이트에서 발견된 오탐): not the AI purple gradient-text look */
+    .reveal { background: linear-gradient(90deg, var(--ink) 50%, color-mix(in srgb, var(--ink) 60%, transparent) 100%) 100% 0 / 300% 100%;
+              -webkit-background-clip: text; background-clip: text; color: transparent; }
+    a:focus-visible { outline: 2px solid var(--ink); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1 class="reveal">게임 캐릭터 제작 노트</h1>
+    <!-- prose that mentions AI-generated images is not an AI filename (실제 개인 사이트에서 발견된 오탐) -->
+    <p>AI-generated characters를 게임에 넣을 때 스케일과 방향을 맞추는 방법을 정리했습니다.</p>
+    <!-- typographic arrows are not emoji (실제 개인 사이트에서 발견된 오탐) -->
+    <p><a href="https://github.com/">GitHub <span aria-hidden="true">↗</span></a> · <a href="/cv.pdf">CV <span aria-hidden="true">↗</span></a>
+       · <a href="#notes">노트 <span aria-hidden="true">→</span></a> · <a href="#contact">연락 <span aria-hidden="true">↗</span></a></p>
+    <section id="notes"><h2>노트</h2><p>손으로 다듬은 스프라이트 12장과 애니메이션 4종.</p></section>
+    <!-- instruction text, not a placeholder (kakaocorp.com) -->
+    <section id="contact"><h2>연락</h2><p>Please include your company name, project scope and timeline in the message.</p></section>
+  </main>
+  <script>
+    // code that builds URLs against example.com is not visible dummy copy (vercel.com)
+    const path = new URL('/notes', 'https://example.com').pathname;
+    // debug logs that mention "subscribe" are not fake form confirmations (samsung.com)
+    console.log('downloadSubscribeDetail');
+    //alert("[GA4 click_nav TEST]");
+  </script>
+</body>
+</html>

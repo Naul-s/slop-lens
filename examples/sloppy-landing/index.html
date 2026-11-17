@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Vite + React</title>
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .hero-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .glow { box-shadow: 0 0 40px rgba(139, 92, 246, 0.5); }
+  </style>
+</head>
+<body class="bg-gray-950 text-white">
+  <!-- Navigation Section -->
+  <nav class="fixed w-full z-50 backdrop-blur-md bg-white/5 border-b border-white/10">
+    <div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+      <span class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">NovaFlow</span>
+      <div class="hidden md:flex gap-8">
+        <a href="#" class="hover:text-indigo-400 transition-all duration-300">Features</a>
+        <a href="#" class="hover:text-indigo-400 transition-all duration-300">Pricing</a>
+        <a href="#" class="hover:text-indigo-400 transition-all duration-300">About</a>
+      </div>
+      <button class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 hover:scale-105 transition-all duration-300 shadow-lg">Get Started</button>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section id="hero" class="relative py-32 text-center overflow-hidden">
+    <div class="absolute -top-40 -left-40 w-96 h-96 bg-purple-600/30 rounded-full blur-3xl"></div>
+    <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-indigo-600/30 rounded-full blur-3xl"></div>
+    <h1 class="text-6xl font-extrabold mb-6">The Future of <span class="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 bg-clip-text text-transparent">Productivity</span>, Reimagined ✨</h1>
+    <p class="text-xl text-gray-400 max-w-2xl mx-auto mb-10 text-center">Elevate your workflow with our cutting-edge, AI-powered platform. Seamlessly streamline your tasks, unlock your full potential, and supercharge your team's productivity — all in one place.</p>
+    <div class="flex justify-center gap-4">
+      <button class="px-8 py-4 rounded-2xl bg-gradient-to-r from-indigo-600 to-purple-600 glow hover:scale-105 transition-all duration-300">Start Free Trial 🚀</button>
+      <button class="px-8 py-4 rounded-2xl border border-white/20 backdrop-blur-sm hover:-translate-y-1 transition-all duration-300">Learn More</button>
+    </div>
+    <img src="assets/DALL-E_hero.png" alt="hero image" class="mt-16 rounded-3xl shadow-2xl mx-auto">
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="py-24 text-center">
+    <h2 class="text-4xl font-bold mb-4">Why Choose NovaFlow?</h2>
+    <p class="text-gray-400 mb-16 text-center">Everything you need to transform the way you work.</p>
+    <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-6">
+      <div class="p-8 rounded-2xl bg-white/5 backdrop-blur-lg border border-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div class="w-12 h-12 rounded-xl bg-indigo-500/10 flex items-center justify-center mb-4">⚡</div>
+        <h3 class="text-xl font-semibold mb-2">Lightning-Fast Performance</h3>
+        <p class="text-gray-400">Experience blazing fast speed with our robust, state-of-the-art infrastructure.</p>
+      </div>
+      <div class="p-8 rounded-2xl bg-white/5 backdrop-blur-lg border border-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div class="w-12 h-12 rounded-xl bg-purple-500/10 flex items-center justify-center mb-4">🔒</div>
+        <h3 class="text-xl font-semibold mb-2">Enterprise-Grade Security</h3>
+        <p class="text-gray-400">Peace of mind with world-class, bank-level encryption that empowers your team.</p>
+      </div>
+      <div class="p-8 rounded-2xl bg-white/5 backdrop-blur-lg border border-white/10 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+        <div class="w-12 h-12 rounded-xl bg-pink-500/10 flex items-center justify-center mb-4">🎯</div>
+        <h3 class="text-xl font-semibold mb-2">Seamless Integrations</h3>
+        <p class="text-gray-400">Effortlessly connect with your favorite tools and leverage innovative workflows.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works Section -->
+  <section class="py-24 text-center">
+    <h2 class="text-4xl font-bold mb-16">How It Works</h2>
+    <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+      <div><div class="text-5xl mb-4">💡</div><h3 class="font-semibold">1. Sign Up</h3><p class="text-gray-400">Create your account in seconds.</p></div>
+      <div><div class="text-5xl mb-4">⚙️</div><h3 class="font-semibold">2. Connect</h3><p class="text-gray-400">Integrate your tools effortlessly.</p></div>
+      <div><div class="text-5xl mb-4">🚀</div><h3 class="font-semibold">3. Launch</h3><p class="text-gray-400">Take your productivity to the next level.</p></div>
+    </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section class="py-24 text-center">
+    <h2 class="text-4xl font-bold mb-16">What Our Customers Say</h2>
+    <p class="mb-10 text-gray-400">Trusted by 10,000+ happy customers worldwide. 99.9% uptime.</p>
+    <div class="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto px-6">
+      <div class="p-8 rounded-2xl bg-white/5 shadow-lg"><p>★★★★★</p><p>"NovaFlow has completely revolutionized how our team works. It's a game-changer!"</p>
+        <img src="https://i.pravatar.cc/150?img=1" class="w-12 h-12 rounded-full mx-auto mt-4"><p class="font-semibold">Sarah Johnson</p><p class="text-sm text-gray-400">CEO at TechCorp</p></div>
+      <div class="p-8 rounded-2xl bg-white/5 shadow-lg"><p>★★★★★</p><p>"The seamless experience is unparalleled. Highly recommend!"</p>
+        <img src="https://i.pravatar.cc/150?img=2" class="w-12 h-12 rounded-full mx-auto mt-4"><p class="font-semibold">Michael Chen</p><p class="text-sm text-gray-400">Product Manager at InnovateCo</p></div>
+      <div class="p-8 rounded-2xl bg-white/5 shadow-lg"><p>★★★★★</p><p>"Our productivity skyrocketed. Best decision we've made."</p>
+        <img src="https://i.pravatar.cc/150?img=3" class="w-12 h-12 rounded-full mx-auto mt-4"><p class="font-semibold">Emily Rodriguez</p><p class="text-sm text-gray-400">Founder at StartupX</p></div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section id="pricing" class="py-24 text-center">
+    <h2 class="text-4xl font-bold mb-16">Simple, Transparent Pricing</h2>
+    <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto px-6">
+      <div class="p-8 rounded-2xl bg-white/5"><h3>Starter</h3><p class="text-4xl">$9<span>/month</span></p><button class="mt-6 w-full py-3 rounded-xl bg-white/10">Get Started</button></div>
+      <div class="p-8 rounded-2xl bg-gradient-to-b from-indigo-600 to-purple-700 scale-105 shadow-2xl"><span class="px-3 py-1 rounded-full bg-white/20 text-sm">Most Popular</span><h3>Pro</h3><p class="text-4xl">$29<span>/month</span></p><button class="mt-6 w-full py-3 rounded-xl bg-white text-indigo-600">Get Started</button></div>
+      <div class="p-8 rounded-2xl bg-white/5"><h3>Enterprise</h3><p class="text-4xl">Custom</p><button class="mt-6 w-full py-3 rounded-xl bg-white/10">Contact Us</button></div>
+    </div>
+  </section>
+
+  <!-- FAQ Section -->
+  <section class="py-24 max-w-3xl mx-auto text-center">
+    <h2 class="text-4xl font-bold mb-12">Frequently Asked Questions</h2>
+    <div class="space-y-4 text-left"><details class="p-6 rounded-2xl bg-white/5"><summary>Is there a free trial?</summary><p>Yes! Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p></details></div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="py-24 text-center hero-bg">
+    <h2 class="text-5xl font-bold mb-6">Ready to Transform Your Workflow?</h2>
+    <p class="mb-8">Join thousands of teams already using NovaFlow.</p>
+    <form id="newsletter" class="flex justify-center gap-2">
+      <input type="email" placeholder="Enter your email" class="px-6 py-3 rounded-xl text-black">
+      <button class="px-6 py-3 rounded-xl bg-white text-indigo-600">Get Started</button>
+    </form>
+  </section>
+
+  <!-- Footer Section -->
+  <footer class="py-12 text-center text-gray-500">
+    <p>© 2024 Your Company Name. All rights reserved.</p>
+    <div class="flex justify-center gap-6 mt-4"><a href="#">Privacy Policy</a><a href="#">Terms of Service</a><a href="#" aria-label="Twitter">𝕏</a></div>
+    <p class="mt-2">hello@example.com · (555) 123-4567</p>
+  </footer>
+
+  <script>
+    // Get the form element
+    const form = document.getElementById('newsletter');
+    // Add event listener for submit
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      // In a real app, you would send this to your backend
+      alert('Thanks for subscribing! 🎉');
+      console.log('Form submitted');
+    });
+    // Initialize animations
+    console.log('Page loaded');
+    console.log('Ready');
+  </script>
+</body>
+</html>

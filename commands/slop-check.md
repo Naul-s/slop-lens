@@ -1,0 +1,10 @@
+---
+description: AI Slop 판독 — 대상(폴더/URL)을 정적 분석 + 시각 검토 후 판정과 해결책 제시
+argument-hint: "[폴더 경로 또는 URL, 생략 시 현재 프로젝트]"
+---
+slop-lens 스킬의 워크플로를 따라 `$ARGUMENTS`(비어 있으면 현재 작업 폴더)의 AI Slop 여부를 판독해줘.
+
+1. `slop_scan`으로 정적 분석 (절대 경로 사용).
+2. `slop_review_protocol`로 리뷰 자료를 받고, 화면 시트·에셋 시트·플레이 프레임 이미지를 직접 열어 본 뒤 감각별(S1~S8, C1) 레벨·근거·이유·해결을 `slop_submit_review`로 제출. 이미지를 볼 수 없으면 그 사실을 밝히고 잠정 판정으로 둠. Unity 게임이면 먼저 `slop-lens.py unity-capture`가 필요하다고 안내.
+3. 리포트의 '왜 AI 슬롭으로 느껴지나' 순서대로 원인 상위 3~5개를 느낌 → 보이고 들리는 근거 → 해결로 설명.
+4. `slop_fix_plan`의 단계별 계획을 요약하고, 바로 수정을 진행할지 물어봐.

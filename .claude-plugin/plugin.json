@@ -1,0 +1,19 @@
+{
+  "name": "slop-lens",
+  "version": "0.4.0",
+  "description": "Reference plugin & skill that explains why AI-made websites and games may feel like AI slop, with evidence and suggested fixes. Not an authoritative AI-slop detector.",
+  "author": {
+    "name": "SlopLens contributors"
+  },
+  "license": "MIT",
+  "keywords": [
+    "ai-slop",
+    "design-review",
+    "ux",
+    "game-feel",
+    "quality",
+    "mcp"
+  ],
+  "homepage": "https://github.com/Naul-s/slop-lens",
+  "repository": "https://github.com/Naul-s/slop-lens"
+}

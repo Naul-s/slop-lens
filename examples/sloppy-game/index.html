@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Neon Galaxy Defender</title>
+  <style>
+    body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; }
+    canvas { border: 2px solid #0ff; box-shadow: 0 0 30px #0ff; }
+  </style>
+</head>
+<body>
+  <canvas id="game" width="800" height="600"></canvas>
+  <script>
+    // Get the canvas element
+    const canvas = document.getElementById('game');
+    // Get the 2D context
+    const ctx = canvas.getContext('2d');
+
+    // Initialize game variables
+    let player = { x: 400, y: 550, w: 40, h: 20, speed: 5 };
+    let bullets = [];
+    let enemies = [];
+    let score = 0;
+    let lives = 3;
+    let keys = {};
+
+    // Add event listeners for keyboard input
+    document.addEventListener('keydown', e => keys[e.key] = true);
+    document.addEventListener('keyup', e => keys[e.key] = false);
+
+    // Function to spawn enemies
+    function spawnEnemy() {
+      enemies.push({ x: Math.random() * 760, y: -20, w: 40, h: 40, speed: 2 });
+    }
+
+    // Update the game state
+    function update() {
+      if (keys['ArrowLeft'] && player.x > 0) player.x -= player.speed;
+      if (keys['ArrowRight'] && player.x < 760) player.x += player.speed;
+      if (keys[' ']) bullets.push({ x: player.x + 18, y: player.y, speed: 7 });
+
+      bullets.forEach(b => b.y -= b.speed);
+      enemies.forEach(en => en.y += en.speed);
+
+      // Check if bullets hit enemies
+      bullets.forEach((b, bi) => {
+        enemies.forEach((en, ei) => {
+          if (b.x < en.x + en.w && b.x > en.x && b.y < en.y + en.h && b.y > en.y) {
+            enemies.splice(ei, 1);
+            bullets.splice(bi, 1);
+            score += 10;
+          }
+        });
+      });
+
+      enemies.forEach((en, i) => {
+        if (en.y > 600) { enemies.splice(i, 1); lives--; }
+      });
+
+      if (lives <= 0) {
+        alert('Game Over! Your score: ' + score);
+        location.reload();
+      }
+    }
+
+    // Draw everything
+    function draw() {
+      ctx.fillStyle = 'black';
+      ctx.fillRect(0, 0, 800, 600);
+      ctx.fillStyle = 'lime';
+      ctx.fillRect(player.x, player.y, player.w, player.h);
+      ctx.fillStyle = 'yellow';
+      bullets.forEach(b => ctx.fillRect(b.x, b.y, 4, 10));
+      ctx.font = '40px Arial';
+      enemies.forEach(en => ctx.fillText('👾', en.x, en.y + 35));
+      ctx.fillStyle = 'white';
+      ctx.font = '20px Arial';
+      ctx.fillText('Score: ' + score, 10, 30);
+      ctx.fillText('Lives: ' + lives, 10, 60);
+      ctx.fillStyle = 'red';
+      ctx.fillRect(700, 10, 80, 10);
+      ctx.fillRect(700, 25, 80, 10);
+    }
+
+    // Main game loop
+    function gameLoop() {
+      update();
+      draw();
+    }
+
+    setInterval(spawnEnemy, 1000);
+    setInterval(gameLoop, 16);
+    console.log('Game started');
+  </script>
+</body>
+</html>

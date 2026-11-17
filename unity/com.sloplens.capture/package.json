@@ -1,0 +1,8 @@
+{
+  "name": "com.sloplens.capture",
+  "version": "0.3.0",
+  "displayName": "SlopLens Capture",
+  "description": "Builds the game and records what a player sees and hears (frames, audio mix, sound events, on-screen text and fonts, frame times, errors) for SlopLens perception review. Active only when the player is started with -sloplens-out.",
+  "unity": "2021.3",
+  "author": { "name": "SlopLens contributors" }
+}
