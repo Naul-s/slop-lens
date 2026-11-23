@@ -14,23 +14,25 @@ from ..model import Evidence, Result, rule
            "effort": "S",
            "directive": "고유한 <title>과 올바른 <html lang> 지정."})
 def a11y_title(ctx):
+    # in a game only a template's default title is something a player sees (the tab); a missing title or lang is not
+    game = ctx.kind == "game"
     issues = []
     for d in ctx.displayed_docs():
         if not d.get("has_html_tag"):
             continue
         t = (d.get("title") or "").strip()
-        if not t:
+        if not t and not game:
             issues.append(Evidence(d["file"], 1, "<title> 없음"))
-        elif t.lower() in GENERIC_TITLES:
+        elif t and t.lower() in GENERIC_TITLES:
             issues.append(Evidence(d["file"], 1, f"기본값 title: {t}"))
-        if not d.get("lang"):
+        if not d.get("lang") and not game:
             issues.append(Evidence(d["file"], 1, "<html lang> 없음"))
     if issues:
         return Result(len(issues), issues[:5], "; ".join(e.snippet for e in issues[:4]))
 
 
 @rule(id="A11Y-02", title="공유 메타데이터·파비콘 누락", category="a11y", kind="quality",
-      weight=2, drivers=["P3"], applies=["web", "game"], threshold=2, saturation=3,
+      weight=2, drivers=["P3"], applies=["web"], threshold=2, saturation=3,
       why="meta description, og:image가 없고 파비콘이 vite.svg/기본값이면 링크를 공유했을 때 '빈 카드'가 나온다. 출시를 고려하지 않은 결과물로 보인다.",
       fix={"summary": "description, og:title/og:image, 고유 파비콘을 추가한다.",
            "steps": ["1200×630 공유 이미지를 만든다.", "브랜드 마크로 SVG 파비콘을 만든다."],
@@ -61,7 +63,7 @@ def a11y_meta(ctx):
 
 
 @rule(id="A11Y-03", title="이미지 대체텍스트 누락·무의미 (alt=\"image\")", category="a11y", kind="quality",
-      weight=2, drivers=["P3"], applies=["web", "game"], threshold=1, saturation=6,
+      weight=2, drivers=["P3"], applies=["web"], threshold=1, saturation=6,
       why="alt가 없거나 'image', 'hero image', 'placeholder'인 것은 이미지의 의미를 아무도 생각하지 않았다는 뜻이다.",
       fix={"summary": "이미지마다 '무엇을 보여주는지'를 문장으로 쓰고, 장식 이미지는 alt=\"\"로 명시한다.",
            "steps": ["정보 이미지: 내용과 맥락을 쓴다.", "장식 이미지: alt=\"\" + aria-hidden."],

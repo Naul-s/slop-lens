@@ -245,6 +245,8 @@ def rnd_mobile(ctx):
         return None
     m = r["mobile"]
     reasons, ev = [], []
+    if m.get("noViewport") and ctx.kind == "game":
+        return None  # no viewport tag: a desktop game by design. Not being on phones is a scope choice, not a defect you see
     if m.get("noViewport"):
         reasons.append(f"viewport 미설정 → 폰에서 {m.get('layoutWidth')}px 데스크톱 화면이 축소 표시")
     if m.get("overflow"):

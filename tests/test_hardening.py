@@ -115,6 +115,39 @@ class JudgmentIntegrity(unittest.TestCase):
         self.assertNotIn(b"GAM-", p.stdout)
 
 
+class GameScoring(unittest.TestCase):
+    """A game's score counts what a player perceives; invisible page hygiene stays a web concern."""
+
+    def _ctx(self, kind, title="", lang=None, no_viewport=False):
+        from slop_lens.context import Context
+        c = Context("x", "url")
+        c.kind = kind
+        c.html_docs = [{"file": "index.html", "has_html_tag": True, "title": title, "lang": lang, "metas": {}, "links": []}]
+        c.render = {"ok": True, "mobile": {"noViewport": no_viewport, "layoutWidth": 980, "overflow": False}}
+        return c
+
+    def test_invisible_page_hygiene_is_not_a_game_defect(self):
+        from slop_lens.rules import get_rules
+        from slop_lens.rules.a11y import a11y_title
+        from slop_lens.rules.render import rnd_mobile
+        game_ids = {r.id for r in get_rules("game")}
+        self.assertFalse({"A11Y-02", "A11Y-03", "VIS-12"} & game_ids)
+        self.assertIsNone(a11y_title(self._ctx("game")))
+        self.assertIsNotNone(a11y_title(self._ctx("web")))
+        self.assertIsNotNone(a11y_title(self._ctx("game", title="Vite + React")))  # a template default shows in the tab
+        self.assertIsNone(rnd_mobile(self._ctx("game", no_viewport=True)))
+        self.assertIsNotNone(getattr(rnd_mobile(self._ctx("web", no_viewport=True)), "count", None))
+
+    def test_game_report_reads_the_axes_separately(self):
+        r = scan(os.path.join(EX, "sloppy-game"), render="off", perception="off")
+        r.add_review(FULL, meta={"blind": True})
+        out = report.to_markdown(r)
+        self.assertIn("AI 제작 흔적", out)
+        self.assertIn("마감 결함", out)
+        web = scan(os.path.join(EX, "sloppy-landing"), render="off", perception="off")
+        self.assertNotIn("AI 제작 흔적", report.to_markdown(web))
+
+
 class Paths(unittest.TestCase):
     def test_project_below_temp_or_tests_keeps_its_assets(self):
         from slop_lens import perceive

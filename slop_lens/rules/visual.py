@@ -282,7 +282,7 @@ def vis_icon_tile(ctx):
 
 
 @rule(id="VIS-12", title="토큰 없는 하드코딩 색상 난립", category="visual", kind="quality",
-      weight=1, drivers=["P5"], applies=["web", "game"], threshold=14, saturation=40,
+      weight=1, drivers=["P5"], applies=["web"], threshold=14, saturation=40,
       why="색이 체계 없이 hex 값으로 흩어져 있으면 미세하게 다른 색이 섞여 화면이 '조금씩 어긋나' 보인다.",
       fix={"summary": "사용 중인 색을 추출해 6~10개 토큰으로 수렴시키고 나머지는 토큰으로 치환한다.",
            "steps": ["모든 hex 값을 뽑아 비슷한 색끼리 묶는다.", "CSS 변수로 정의 후 치환한다."],

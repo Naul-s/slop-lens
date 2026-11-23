@@ -118,6 +118,8 @@ def to_markdown(res, max_findings=20, include_plan=True, include_brief=True):
     L.append("")
     L.append(f"**유형: {ax['quadrant']['label']}** — {ax['quadrant']['description']}")
     L.append("")
+    if d["kind"] == "game":
+        L += game_axes_note(res, ax)
     extra = []
     if d["visual_index"] is not None:
         extra.append(f"정적 {d['static_index']:.0f} + 시각 검토 {d['visual_index']:.0f} (반영 비율 {d['visual_blend']:.0%})")
@@ -243,6 +245,22 @@ def to_markdown(res, max_findings=20, include_plan=True, include_brief=True):
     for n in c.get("notes", []):
         L.append(f"> 참고: {n}")
     return "\n".join(L)
+
+
+def game_axes_note(res, ax):
+    """For games the two axes answer different questions; the combined index answers neither on its own."""
+    fp = [f for f in res.findings if f.rule.kind == "fingerprint" and f.rule.source != "visual"]
+    L = ["> **게임은 두 축을 따로 읽으세요.**",
+         f"> - AI 제작 흔적 = AI 지문 축 **{ax['genericness']:.0f}**: 생성 이미지, 웹 UI 키트를 얹은 HUD(글래스·발광·장식 대문자 라벨), "
+         "이모지 스프라이트처럼 AI 도구가 남기는 흔적입니다. 검증한 게임 60개(처음 보는 20개 포함)에서 이 축이 AI·사람 제작을 가장 일관되게 갈랐지만(표본별 AUC 0.73~0.86), "
+         "AI 게임의 상당수는 흔적이 거의 없었습니다. 높으면 근거가 되고, 낮다고 사람이 만들었다는 뜻은 아닙니다.",
+         f"> - 마감 결함 = 완성도 결함 축 **{ax['effort_deficit']:.0f}**: 효과음·피드백·상태 흐름 같은 마감의 양입니다. 사람이 만든 잼·취미 게임에도 흔해서 AI 여부와는 따로 움직입니다.",
+         "> - Slop Index는 두 축을 합친 값이라 게임에서는 어느 쪽 질문에도 혼자서는 답하지 못합니다."]
+    if fp:
+        L.append("> - 측정에서 나온 AI 흔적: " + ", ".join(f"[{f.rule.id}] {f.rule.title}" for f in fp[:6]))
+    else:
+        L.append("> - 측정에서 나온 AI 흔적: 없음 (흔적이 없다고 사람이 만들었다는 뜻은 아닙니다)")
+    return L + [""]
 
 
 def needs_blind(res):
