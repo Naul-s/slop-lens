@@ -1,108 +1,104 @@
 # SlopLens
 
-An agent plugin & skill that finds **why an AI-made website or game feels like "AI slop"** — and shows the evidence and how to fix it.
+Explains why an AI-made website or game feels like "AI slop", with evidence and fixes.
 
-[한국어 설명은 아래에 있습니다 ↓](#한국어)
+[한국어](#한국어)
 
-> [!IMPORTANT]
-> This is **not an authoritative AI-slop detector.** People make the call; SlopLens gives reference evidence and suggested fixes.
+> [!NOTE]
+> SlopLens is a reference tool, not an authoritative AI-slop detector.
 
-## What it does
+## Features
 
-- **Causes** — spots what makes work feel low-effort: purple gradients, raw AI-generated images, the same beep for every sound, default engine UI, cliché copy.
-- **Evidence** — every finding comes with a file location, screenshot, or measurement.
-- **Fixes** — suggests what to fix first and how.
+- Finds the causes of a low-effort feel: default palettes, unedited AI images, repeated sound effects, stock UI and copy.
+- Backs every finding with a file location, screenshot or measurement.
+- Orders fixes by impact and effort.
+- Works as a Claude Code plugin, an MCP server and a CLI.
 
 ## Install
 
-Requires Python 3.9+. This repository is its own plugin marketplace (`slop-lens`); it is not listed in Anthropic's official marketplace yet.
+Requires Python 3.9+.
 
-**Claude Code — terminal · VS Code**
+**Claude Code**
 
 ```text
 /plugin marketplace add Naul-s/slop-lens
 /plugin install slop-lens@slop-lens
 ```
 
-Or from your shell in one step:
+Or from a shell:
 
 ```bash
 claude plugin install slop-lens --marketplace Naul-s/slop-lens
 ```
 
-**Claude desktop app — Code tab**
+In the desktop app's Code tab, add the marketplace as above, then **+** → **Add plugins** → **slop-lens**.
 
-1. Add the marketplace once with the shell command above. The terminal, VS Code and the desktop app share the same plugin settings.
-2. In the Code tab, click **+** next to the prompt box → **Add plugins** (or **Plugins → Browse plugins**) → select **slop-lens**.
+**Other agents (MCP)**
 
-**Other agents (MCP)** — clone the repo first: `git clone https://github.com/Naul-s/slop-lens.git`
+```bash
+git clone https://github.com/Naul-s/slop-lens.git
+```
 
 | Agent | Setup |
 |---|---|
-| Claude desktop app — Chat tab | Settings → Developer → Edit Config, paste [`integrations/generic/mcp.json`](integrations/generic/mcp.json), restart |
+| Claude desktop app (Chat tab) | Paste [`integrations/generic/mcp.json`](integrations/generic/mcp.json) into Settings → Developer → Edit Config |
 | Gemini CLI | `gemini extensions install https://github.com/Naul-s/slop-lens` |
 | Codex CLI | `codex mcp add slop-lens -- python <path>/bin/slop-lens-mcp.py` |
-| Cursor · VS Code · Windsurf, etc. | `mcp.json` in [`integrations/`](integrations) |
+| Cursor, VS Code, Windsurf | See [`integrations/`](integrations) |
 
-Replace `/ABS/PATH` or `<path>` with the folder you cloned into.
+**Browser measurement (optional)**
 
-**Optional: real-browser measurement** (Node 18+, uses your installed Chrome or Edge). Without it, scans read the source only.
-The Claude Code plugin installs it automatically. For a cloned repo, run `npm install` in the SlopLens folder.
-
-## Update
-
-Gets the latest version from GitHub. It detects how SlopLens was installed (Claude Code plugin, git clone, or Gemini extension).
-
-```text
-/slop-lens:update            # inside Claude Code
-```
-
-```bash
-python bin/slop-lens.py update           # update now
-python bin/slop-lens.py update --check   # only check for a new version
-```
-
-After a plugin update, run `/reload-plugins` or start a new session.
+Needs Node 18+ and Chrome or Edge. The Claude Code plugin sets it up automatically; for a clone, run `npm install`. Check with `python bin/slop-lens.py doctor`.
 
 ## Usage
 
-Inside an agent, just ask: **"Does this look like AI slop?"**
-
-Or run it directly:
+Ask your agent: *"Does this look like AI slop?"*
 
 ```bash
-python bin/slop-lens.py scan ./my-site              # folder
-python bin/slop-lens.py scan http://localhost:5173  # URL
-python bin/slop-lens.py scan ./my-game --kind game  # game
+python bin/slop-lens.py scan ./my-site
+python bin/slop-lens.py scan http://localhost:5173
+python bin/slop-lens.py scan ./my-game --kind game
+python bin/slop-lens.py unity-capture ./my-unity-project
 ```
+
+- Games are judged by a review of the screens. Measurements stay hidden until the review is submitted.
+- `unity-capture` builds and plays a copy of the project. The original is not modified.
+
+## Update
+
+```text
+/slop-lens:update
+```
+
+```bash
+python bin/slop-lens.py update [--check]
+```
+
+Then run `/reload-plugins` or start a new session.
 
 ## Safety
 
-Scanning runs the target's code in a browser, so SlopLens treats every target as untrusted:
+Scanned pages are treated as untrusted.
 
-- Chromium's OS sandbox is on. In containers where it cannot start, `SLOP_LENS_NO_SANDBOX=1` turns it off; use that only for targets you trust.
-- On any host other than localhost, gameplay input is limited to the game canvas and unambiguous Play buttons. `confirm()` is answered "no".
-- Once automated input starts, state-changing requests (POST/PUT/PATCH/DELETE) and new WebSockets to other machines are blocked. A state-changing GET cannot be recognized, so this is not a guarantee.
-- The local preview server serves only the target folder, without dot files or key files. Other files in that folder are readable by the page being scanned.
+- Chromium runs sandboxed. `SLOP_LENS_NO_SANDBOX=1` disables this for containers.
+- On non-local hosts, automated play only touches the game canvas and Play buttons.
+- After input starts, outgoing POST/PUT/PATCH/DELETE requests and new WebSockets are blocked. State changes made over GET are not.
+- The preview server only serves the target folder, excluding dot files and keys. Pages can read the rest of that folder.
 
-## How far can you trust it?
+## Accuracy
 
 | | |
 |---|---|
-| Websites | Useful as a first-pass check |
-| Games | Measurements alone can't decide → a review of the actual screens is required |
-| Fixes | Evidence is checkable; real-world effect is still being validated |
+| Websites | First-pass check. AUC 0.83 on 20 held-out sites. |
+| Games | Needs a screen review. AI-trace score: AUC 0.73 on 20 held-out games. |
+| Reviews | Not yet validated against human raters. |
+| Fixes | Effect not yet measured. |
 
-Details: [docs/VALIDATION.md](docs/VALIDATION.md)
+See [docs/VALIDATION.md](docs/VALIDATION.md).
 
-## Feedback
+## Docs
 
-Wrong verdicts, missed slop signals, results after applying fixes — please open an [issue](https://github.com/Naul-s/slop-lens/issues).
-
-## Docs (Korean)
-
-- [Research notes](docs/RESEARCH.md)
-[Criteria](docs/CRITERIA.md) · [Architecture](docs/ARCHITECTURE.md) · [Integrations](docs/INTEGRATIONS.md) · [Validation](docs/VALIDATION.md)
+[Criteria](docs/CRITERIA.md) · [Architecture](docs/ARCHITECTURE.md) · [Integrations](docs/INTEGRATIONS.md) · [Validation](docs/VALIDATION.md) · [Research](docs/RESEARCH.md) (Korean)
 
 ## License
 
@@ -112,49 +108,54 @@ MIT
 
 ## 한국어
 
-AI로 만든 웹사이트·게임이 **왜 "AI 슬롭"처럼 보이는지** 찾아서, 근거와 해결책을 알려주는 에이전트 플러그인·스킬입니다.
+AI로 만든 웹사이트·게임이 왜 "AI 슬롭"처럼 느껴지는지 근거와 해결책으로 설명합니다.
 
-> [!IMPORTANT]
-> AI 슬롭을 판정하는 **절대적인 기준이 아닙니다.** 판단은 사람이 하고, 이 도구는 참고용 근거와 해결책을 제공합니다.
+> [!NOTE]
+> 참고용 도구이며, AI 슬롭을 판정하는 절대 기준이 아닙니다.
 
-**무엇을 해주나요**
+### 기능
 
-- **원인** — 보라 그라디언트, 다듬지 않은 생성 이미지, 똑같은 비프 효과음, 엔진 기본 UI, 상투 문구 같은 "대충 만든 느낌"의 원인을 찾습니다.
-- **근거** — 각 지적마다 파일 위치·화면·측정값을 함께 보여줍니다.
-- **해결** — 무엇부터 고치면 좋은지 순서와 방법을 제안합니다.
+- 대충 만든 느낌의 원인을 찾습니다: 기본 배색, 다듬지 않은 AI 이미지, 반복되는 효과음, 기본 UI와 상투 문구.
+- 모든 지적에 파일 위치·스크린샷·측정값을 붙입니다.
+- 효과와 작업량 순으로 수정 순서를 제안합니다.
+- Claude Code 플러그인, MCP 서버, CLI로 쓸 수 있습니다.
 
-**설치** — Python 3.9+가 필요합니다. 이 리포 자체가 플러그인 마켓플레이스(`slop-lens`)이며, Anthropic 공식 마켓플레이스에는 아직 등록되어 있지 않습니다.
+### 설치
 
-- **Claude Code (터미널 · VS Code)** — 세션에서 `/plugin marketplace add Naul-s/slop-lens` → `/plugin install slop-lens@slop-lens`
-  또는 셸에서 한 번에: `claude plugin install slop-lens --marketplace Naul-s/slop-lens`
-- **Claude 데스크탑 앱 (Code 탭)**
-  1. 위 셸 명령으로 마켓플레이스를 한 번 추가합니다. 터미널·VS Code·데스크탑 앱은 같은 플러그인 설정을 씁니다.
-  2. Code 탭 입력창 옆 **+** → **Add plugins** (또는 **Plugins → Browse plugins**) → **slop-lens** 선택
-- **Claude 데스크탑 앱 (Chat 탭)** — 리포를 클론한 뒤 설정 → 개발자 → 구성 편집에서 [`integrations/generic/mcp.json`](integrations/generic/mcp.json) 내용을 붙여 넣고 앱을 다시 시작합니다.
-- **Gemini · Codex · Cursor 등** — 위 [Install](#install) 표를 참고하세요.
-- **선택: 실제 브라우저 측정** — Node 18+와 설치된 Chrome·Edge를 씁니다. 없으면 소스만 읽고 판정합니다. Claude Code 플러그인은 자동으로 설치되고, 클론한 경우 SlopLens 폴더에서 `npm install`을 실행하세요.
+Python 3.9 이상이 필요합니다.
 
-**업데이트** — GitHub 최신 버전을 받습니다. 설치 방식(Claude Code 플러그인·git clone·Gemini 확장)을 자동으로 알아냅니다.
+- **Claude Code:** `/plugin marketplace add Naul-s/slop-lens` → `/plugin install slop-lens@slop-lens`
+- **데스크톱 앱 Code 탭:** 위처럼 마켓플레이스를 추가한 뒤 **+** → **Add plugins** → **slop-lens**
+- **다른 에이전트(MCP):** 저장소를 클론하고 위 [Install](#install) 표를 따릅니다.
+- **브라우저 측정(선택):** Node 18 이상과 Chrome·Edge가 필요합니다. 플러그인은 자동 설치되고, 클론했다면 `npm install`을 실행합니다. 확인은 `python bin/slop-lens.py doctor`.
 
-- Claude Code 안에서: `/slop-lens:update` (확인만: `/slop-lens:update --check`)
-- 터미널에서: `python bin/slop-lens.py update` (확인만: `--check`)
-- 플러그인은 업데이트 후 `/reload-plugins`를 실행하거나 새 세션을 열면 적용됩니다.
+### 사용
 
-**사용** — 에이전트 안에서 **"이거 AI 슬롭처럼 보이는지 봐줘"** 라고 말하면 됩니다. 직접 실행하려면 위 [Usage](#usage) 명령을 쓰세요.
+에이전트에게 *"이거 AI 슬롭처럼 보이는지 봐줘"*라고 요청합니다. CLI 명령은 위 [Usage](#usage)를 참고하세요.
 
-**안전** — 검사하면 대상의 코드가 브라우저에서 실행되므로, 모든 대상을 신뢰하지 않는 것으로 다룹니다.
+- 게임은 화면 리뷰로 판정하며, 리뷰를 제출하기 전에는 측정 결과를 보여 주지 않습니다.
+- `unity-capture`는 프로젝트 복사본을 빌드해 플레이합니다. 원본은 바뀌지 않습니다.
 
-- 브라우저 샌드박스를 켭니다. 컨테이너에서 켤 수 없을 때만, 믿는 대상에 한해 `SLOP_LENS_NO_SANDBOX=1`을 쓰세요.
-- localhost가 아닌 사이트에서는 게임 캔버스와 명확한 시작 버튼만 조작하고, `confirm()`에는 "아니요"로 답합니다.
-- 자동 조작이 시작되면 외부로 나가는 변경 요청(POST 등)을 막습니다. 다만 GET으로 상태를 바꾸는 사이트까지 막는다고 보장하지는 못합니다.
-- 검사 대상 폴더 안의 파일은 그 페이지가 읽을 수 있습니다(숨김·키 파일 제외). 받은 프로젝트는 별도 폴더에서 검사하세요.
+### 업데이트
 
-**얼마나 믿어도 되나요**
+`/slop-lens:update` 또는 `python bin/slop-lens.py update [--check]`. 이후 `/reload-plugins`를 실행하거나 새 세션을 엽니다.
+
+### 안전
+
+검사하는 페이지는 신뢰하지 않는 것으로 다룹니다.
+
+- 브라우저를 샌드박스에서 실행합니다. 컨테이너에서는 `SLOP_LENS_NO_SANDBOX=1`로 끌 수 있습니다.
+- 로컬이 아닌 사이트에서는 게임 캔버스와 시작 버튼만 조작합니다.
+- 자동 조작이 시작되면 외부로 나가는 POST/PUT/PATCH/DELETE 요청과 새 WebSocket을 막습니다. GET으로 일어나는 상태 변경은 막지 못합니다.
+- 미리보기 서버는 대상 폴더만 열며, 숨김 파일과 키 파일은 제외합니다. 그 폴더의 나머지 파일은 페이지가 읽을 수 있습니다.
+
+### 정확도
 
 | | |
 |---|---|
-| 웹사이트 | 1차 점검용으로 쓸 만함 |
-| 게임 | 측정만으로는 판단 불가 → 화면을 직접 본 리뷰가 있어야 판정 |
-| 해결책 | 근거는 확인 가능, 실제 효과는 아직 검증 중 |
+| 웹사이트 | 1차 점검용. 처음 보는 사이트 20개에서 AUC 0.83 |
+| 게임 | 화면 리뷰 필요. AI 제작 흔적 점수: 처음 보는 게임 20개에서 AUC 0.73 |
+| 리뷰 | 사람 평가자 기준 검증 전 |
+| 해결책 | 효과 측정 전 |
 
-**의견 보내기** — 틀린 판정, 놓친 슬롭 신호, 해결책 후기를 [이슈](https://github.com/Naul-s/slop-lens/issues)로 알려주세요.
+자세한 내용은 [docs/VALIDATION.md](docs/VALIDATION.md)에 있습니다.
