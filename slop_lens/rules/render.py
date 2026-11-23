@@ -337,7 +337,10 @@ def rnd_loop(ctx):
     fast_iv = [i for i in g.get("intervals", []) if 0 < i <= 40]
     if g.get("rafFrames", 0) < 10 and fast_iv:
         issues.append(f"setInterval({fast_iv[0]}ms) 렌더 루프, rAF 프레임 {g.get('rafFrames', 0)}")
-    if g.get("rafFrames", 0) > 60 and g.get("longFrameShare", 0) >= 0.1:
+    env = (_r(ctx) or {}).get("env") or {}
+    slow_machine = bool(env.get("software") or (env.get("cpuMs") or 0) > 30)
+    if g.get("rafFrames", 0) > 60 and g.get("longFrameShare", 0) >= 0.1 and not slow_machine:
+        # on a software rasteriser or a slow CPU the frame times describe the measuring machine, not the game
         issues.append(f"34ms 초과 프레임 {g['longFrameShare']:.0%}")
     if issues:
         return Result(len(issues), [], "; ".join(issues))

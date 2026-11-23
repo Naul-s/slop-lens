@@ -718,6 +718,10 @@ async function playGame(page, out, guard, docs) {
     return window.__slLib.audioFeatures(x, S.rec.sr);
   }).catch(() => null);
   g.sound = soundSummary([...docs.values()].map(d => d.sound), mix);
+  // sound files the game loaded, played or not: a short autoplay may trigger only one kind of event
+  const loaded = await safeEval(page, () => [...new Set(performance.getEntriesByType('resource').map(e => e.name.split(/[?#]/)[0])
+    .filter(n => /\.(wav|mp3|ogg|oga|m4a|aac|flac|webm)$/i.test(n)))]).catch(() => null);
+  if (g.sound && loaded) g.sound.loadedSoundFiles = loaded.length;
   g.inputSkipped = input.skipped.n;
   g.requestsBlocked = guard.blocked;
   g.safeMode = !input.free();
@@ -736,6 +740,30 @@ function soundSummary(docs, mix) {
     samplePlays: sum('buffers'), distinctSamples: uniq('kinds').length, sampleRateVariety: uniq('rates').length,
     filters: sum('filters'), reverbs: sum('convolvers'), compressors: sum('compressors'), distortion: sum('shapers'),
     envelopeRamps: sum('ramps'), mediaFiles: uniq('media').slice(0, 10), mediaPlays: sum('mediaPlays'), mix };
+}
+
+// The machine doing the measuring: without a GPU (software rasteriser) or on a slow CPU, frame timing describes the
+// test machine, not the game.
+async function measureMachine(browser) {
+  const page = await browser.newPage();
+  try {
+    const m = await within(page.evaluate(() => {
+      const gl = document.createElement('canvas').getContext('webgl');
+      const ext = gl && gl.getExtension('WEBGL_debug_renderer_info');
+      const renderer = gl ? String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) : 'none';
+      const runs = [];
+      for (let k = 0; k < 5; k++) {
+        const t = performance.now(); let x = 0;
+        for (let i = 0; i < 3e6; i++) x = (x * 1664525 + 1013904223) | 0;
+        runs.push(performance.now() - t + (x & 0));
+      }
+      runs.sort((a, b) => a - b);
+      return { renderer: renderer.slice(0, 160), cpuMs: +runs[2].toFixed(1) };
+    }), 8000);
+    if (!m) return null;
+    m.software = /swiftshader|llvmpipe|softpipe|basic render|software|none/i.test(m.renderer);
+    return m;
+  } finally { await within(page.close(), 5000); }
 }
 
 // ---------------------------------------------------------------- main
@@ -758,6 +786,7 @@ async function main() {
   if (OUT) fs.mkdirSync(OUT, { recursive: true });
   const { browser, name } = await launch();
   out.browser = name; out.url = url;
+  out.env = await measureMachine(browser);
   const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 1, serviceWorkers: 'block', acceptDownloads: false });
   const guard = GUARD = await guardContext(ctx);
   const docs = new Map();  // per-document telemetry, see INSTRUMENT

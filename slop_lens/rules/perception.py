@@ -90,6 +90,9 @@ def aud_repeat(ctx):
         voices = len(s.get("distinctSynthVoices") or []) + samples + len(set(s.get("mediaFiles") or []))
         if s.get("samplePlays") and samples <= 1:
             voices += max(0, (s.get("sampleRateVariety") or 0) - 1)  # one sample, pitched → still variation
+        loaded = max(s.get("loadedSoundFiles") or 0, len([a for a in ((_p(ctx) or {}).get("audio") or []) if a.get("duration", 9) < 3]))
+        if plays >= 4 and voices <= 1 and loaded >= 2:
+            return None  # the game has other sounds; the short autoplay only triggered one kind of event
         if plays >= 4 and voices <= 1:
             what = f"합성음 {s.get('distinctSynthVoices')}" if s.get("oscillatorPlays") else f"샘플 {samples}종"
             return Result(1, [E(f"{plays}회 재생이 모두 같은 소리 ({what})")], "모든 효과음이 같은 소리")

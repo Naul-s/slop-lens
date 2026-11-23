@@ -138,6 +138,26 @@ class GameScoring(unittest.TestCase):
         self.assertIsNone(rnd_mobile(self._ctx("game", no_viewport=True)))
         self.assertIsNotNone(getattr(rnd_mobile(self._ctx("web", no_viewport=True)), "count", None))
 
+    def test_judgments_abstain_when_the_measurement_was_too_thin(self):
+        from slop_lens.context import Context
+        from slop_lens.rules.perception import aud_repeat
+        from slop_lens.rules.render import rnd_loop
+
+        def ctx(env=None, sound=None):
+            c = Context("x", "url")
+            c.kind, c.unity, c.perception = "game", None, None
+            c.render = {"ok": True, "env": env or {}, "game": {"hasCanvas": True, "rafFrames": 300, "longFrameShare": 0.2,
+                                                              "intervals": [], "sound": sound}}
+            return c
+        # frame times on a software rasteriser describe the test machine, not the game
+        self.assertIsNotNone(getattr(rnd_loop(ctx({"software": False, "cpuMs": 10})), "count", None))
+        self.assertNotIsInstance(getattr(rnd_loop(ctx({"software": True, "cpuMs": 10})), "count", None), int)
+        self.assertNotIsInstance(getattr(rnd_loop(ctx({"software": False, "cpuMs": 45})), "count", None), int)
+        # one kind of sound in a short autoplay is not "every sound is the same" when the game loaded others
+        one = {"oscillatorPlays": 0, "samplePlays": 0, "mediaPlays": 12, "mediaFiles": ["splash.wav"], "distinctSamples": 0}
+        self.assertIsNotNone(getattr(aud_repeat(ctx(sound=one)), "count", None))
+        self.assertIsNone(aud_repeat(ctx(sound=dict(one, loadedSoundFiles=3))))
+
     def test_game_report_reads_the_axes_separately(self):
         r = scan(os.path.join(EX, "sloppy-game"), render="off", perception="off")
         r.add_review(FULL, meta={"blind": True})
