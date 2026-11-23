@@ -125,7 +125,7 @@ class ReviewMaterial(unittest.TestCase):
         self.assertIn("이미지 파일 아님", out)
         self.assertIn("파일 없음", out)
         # a frame note with an absolute path attaches that screenshot too, and counts toward coverage
-        r.add_review([{"id": "S1", "level": 1}], frames=[{"file": ending, "note": "엔딩 화면"}, {"file": boss, "note": "보스"}],
+        r.add_review([{"id": k, "level": 1} for k in ("S1", "S2", "S4", "S7", "S8")], frames=[{"file": ending, "note": "엔딩 화면"}, {"file": boss, "note": "보스"}],
                      meta={"blind": True})
         self.assertIn(os.path.abspath(ending), review_frames(r))
         self.assertEqual(len(r.to_dict()["attachments"]), 2)
@@ -274,7 +274,9 @@ class MCPProtocol(unittest.TestCase):
         p = subprocess.run([sys.executable, os.path.join(ROOT, "bin", "slop-lens-mcp.py")], input=inp.encode("utf-8"),
                            capture_output=True, timeout=120)
         lines = [json.loads(l) for l in p.stdout.decode("utf-8").splitlines() if l.strip()]
-        self.assertEqual([l["id"] for l in lines], [1, 2, 3, 4, 5])
+        # ping/list are answered while a tool call runs, so replies are matched by id and not by arrival order
+        self.assertEqual(sorted(l["id"] for l in lines), [1, 2, 3, 4, 5])
+        lines.sort(key=lambda l: l["id"])
         self.assertEqual(lines[0]["result"]["serverInfo"]["name"], "slop-lens")
         names = {t["name"] for t in lines[1]["result"]["tools"]}
         self.assertTrue({"slop_scan", "slop_visual_rubric", "slop_submit_visual_review", "slop_fix_plan"} <= names)

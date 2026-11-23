@@ -45,7 +45,7 @@ Unity 캡처는 사용자의 원본 프로젝트를 절대 수정하지 않는�
 ```
 ┌──────────────────────────── 에이전트 어댑터 (얇은 껍데기) ─────────────────────────────┐
 │ Claude Code 플러그인        Gemini CLI 확장          Codex / Cursor / VS Code / 기타    │
-│ .claude-plugin/ .mcp.json   gemini-extension.json    integrations/*/  AGENTS.md         │
+│ .claude-plugin/plugin.json  gemini-extension.json    integrations/*/  AGENTS.md         │
 │ skills/ commands/*.md       GEMINI.md commands/*.toml                                    │
 │ agents/slop-auditor.md                                                                   │
 └───────────────┬──────────────────────────┬──────────────────────────────┬───────────────┘
@@ -87,6 +87,19 @@ Python engine ──subprocess──► node probe/render-probe.mjs ──► Ch
   `Result`면 문제를 실측으로 보고하고 정적 규칙을 버린다. `CLEAN`이면 측정상 문제가 없으므로 정적 추정(오탐 가능)을 버린다.
   `None`이면 측정 불가로 정적 결과를 유지한다. 무작위 플레이에서 재현되지 않을 수 있는 항목(alert 게임오버 등)은 `clean_supersedes=False`로 정적 증거를 유지한다.
 - **URL/SPA**: URL 검사 시 렌더링된 DOM으로 컨텍스트를 다시 만들어 JS로 그려지는 페이지도 카피·구조 규칙이 동작한다.
+
+## 안전·신뢰 경계
+
+| 경계 | 담당 | 규칙 |
+|---|---|---|
+| 브라우저 ↔ OS | `probe/safety.mjs` `launchBrowser` | 샌드박스 켬 |
+| 페이지 ↔ 파일 | `serveDirs` | 대상 폴더 안의 파일만, 숨김·키 파일 제외, Host 검사 |
+| 자동 입력 ↔ 외부 서비스 | `inputPolicy`, `guardContext` | 캔버스·시작 버튼만, 변경 요청 차단 |
+| 대상의 글자 ↔ 리뷰 에이전트 | `review.one_line` | 한 줄 데이터로만 인용 |
+| 측정 ↔ 리뷰어 | `report.needs_blind`, `ScanResult.revealed` | 완전한 리뷰 전에는 비공개, 공개 뒤 리뷰는 비블라인드 |
+| MCP ↔ 자식 프로세스 | `slop_lens/proc.py` | stdin 상속 안 함, 취소 시 트리 종료 |
+
+새 자동 입력은 반드시 `inputPolicy`를 거치고, 새 자식 프로세스는 `proc.run`으로 띄운다.
 
 ## 판정 파이프라인
 

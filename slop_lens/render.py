@@ -6,13 +6,14 @@ page in a real browser (installed Chrome/Edge, or Playwright's Chromium) and ret
 measurements that replace several static heuristics with ground truth.
 """
 import glob
-import hashlib
 import json
 import os
 import shutil
 import subprocess
 import tempfile
-import time
+import uuid
+
+from . import proc
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PROBE_DIR = os.path.join(ROOT, "probe")
@@ -76,8 +77,7 @@ def run(target, kind="auto", out_dir=None, timeout=240):
     if not st["available"]:
         return {"ok": False, "error": st["reason"], "skipped": True}
     if not out_dir:
-        h = hashlib.sha1(f"{target}{time.time()}".encode()).hexdigest()[:8]
-        out_dir = os.path.join(tempfile.gettempdir(), "slop-lens", h)
+        out_dir = os.path.join(tempfile.gettempdir(), "slop-lens", uuid.uuid4().hex[:12])
     cmd = [st["node"], PROBE, "--out", out_dir, "--kind", kind]
     if target.lower().startswith(("http://", "https://")):
         cmd += ["--url", target]
@@ -87,7 +87,7 @@ def run(target, kind="auto", out_dir=None, timeout=240):
             return {"ok": False, "error": "렌더할 HTML 진입점(index.html)을 찾지 못함 — 빌드 결과물 폴더나 dev 서버 URL로 검사하세요", "skipped": True}
         cmd += ["--root", root, "--entry", entry]
     try:
-        p = subprocess.run(cmd, capture_output=True, timeout=timeout, cwd=PROBE_DIR)
+        p = proc.run(cmd, timeout, cwd=PROBE_DIR)
     except subprocess.TimeoutExpired:
         return {"ok": False, "error": f"렌더 프로브 시간 초과({timeout}s)"}
     try:

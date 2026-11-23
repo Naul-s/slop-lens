@@ -311,6 +311,7 @@ def from_path(target: str) -> Context:
     if not os.path.isdir(target):
         raise FileNotFoundError(f"대상이 존재하지 않습니다: {target}")
     ctx = Context(target, "dir")
+    real_root = os.path.realpath(target)
     n = 0
     for dirpath, dirnames, filenames in os.walk(target):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS and not d.startswith(".")]
@@ -318,6 +319,10 @@ def from_path(target: str) -> Context:
             ap = os.path.join(dirpath, fn)
             rel = os.path.relpath(ap, target).replace("\\", "/")
             ext = os.path.splitext(fn)[1].lower()
+            if os.path.islink(ap):  # a link could pull files from outside the project into the report
+                real = os.path.realpath(ap)
+                if not real.startswith(os.path.join(real_root, "")):
+                    continue
             if ext in IMAGE_EXT:
                 if len(ctx.images) < MAX_IMAGES:
                     try:

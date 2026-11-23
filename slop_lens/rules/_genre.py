@@ -18,8 +18,7 @@ def play_reached(ctx):
     g = _g(ctx)
     if g is None:
         return None
-    # navDuringPlay: the game restarted itself (game over → reload) in response to the automated input
-    return bool(g.get("changedDuringPlay") or g.get("navDuringPlay") or g.get("audioCalls") or any((g.get("juice") or {}).values())
+    return bool(g.get("changedDuringPlay") or g.get("audioCalls") or any((g.get("juice") or {}).values())
                 or ((g.get("sound") or {}).get("samplePlays") or 0) or ((g.get("sound") or {}).get("oscillatorPlays") or 0))
 
 

@@ -102,7 +102,7 @@ def visual_score(answers):
     return round(100.0 * sum(r.weight * v for r, v in answers if v is not None) / tot_w, 1)
 
 
-def confidence(ctx, visual_ratio=0.0, reviewed=False, review_meta=None, agreement=None, frame_coverage=None, index=None):
+def confidence(ctx, visual_ratio=0.0, reviewed=False, review_meta=None, agreement=None, frame_coverage=None, index=None, unsupported=None):
     pts, reasons = 0, []
     if reviewed:
         pts += 2.5
@@ -116,6 +116,8 @@ def confidence(ctx, visual_ratio=0.0, reviewed=False, review_meta=None, agreemen
         if frame_coverage is not None and frame_coverage < 0.5:
             pts -= 0.5
             reasons.append(f"원본 프레임 중 {frame_coverage:.0%}만 메모함")
+        if unsupported:
+            reasons.append("근거 없이 슬롭(3 이상)으로 판단한 항목: " + ", ".join(unsupported))
         if agreement and agreement.get("conflict"):
             pts -= 1
             reasons.append(f"리뷰와 측정이 {abs(agreement['gap']):.0f}점 차이 → 근거 재확인 필요")
@@ -152,7 +154,7 @@ def confidence(ctx, visual_ratio=0.0, reviewed=False, review_meta=None, agreemen
     level = "high" if pts >= 4 else "medium" if pts >= 2.5 else "low"
     # coverage can't make up for a non-independent or contradicted judgment
     m = review_meta or {}
-    if level == "high" and reviewed and (m.get("knew_expected") or not m.get("blind") or (agreement and agreement.get("conflict"))):
+    if level == "high" and reviewed and (m.get("knew_expected") or not m.get("blind") or unsupported or (agreement and agreement.get("conflict"))):
         level = "medium"
     if level == "high" and not reviewed and ctx.kind == "game":
         level = "medium"  # game measurements alone did not separate AI from human work in validation

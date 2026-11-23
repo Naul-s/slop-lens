@@ -76,6 +76,15 @@ python bin/slop-lens.py scan http://localhost:5173  # URL
 python bin/slop-lens.py scan ./my-game --kind game  # game
 ```
 
+## Safety
+
+Scanning runs the target's code in a browser, so SlopLens treats every target as untrusted:
+
+- Chromium's OS sandbox is on. In containers where it cannot start, `SLOP_LENS_NO_SANDBOX=1` turns it off; use that only for targets you trust.
+- On any host other than localhost, gameplay input is limited to the game canvas and unambiguous Play buttons. `confirm()` is answered "no".
+- Once automated input starts, state-changing requests (POST/PUT/PATCH/DELETE) and new WebSockets to other machines are blocked. A state-changing GET cannot be recognized, so this is not a guarantee.
+- The local preview server serves only the target folder, without dot files or key files. Other files in that folder are readable by the page being scanned.
+
 ## How far can you trust it?
 
 | | |
@@ -92,6 +101,7 @@ Wrong verdicts, missed slop signals, results after applying fixes — please ope
 
 ## Docs (Korean)
 
+- [Research notes](docs/RESEARCH.md)
 [Criteria](docs/CRITERIA.md) · [Architecture](docs/ARCHITECTURE.md) · [Integrations](docs/INTEGRATIONS.md) · [Validation](docs/VALIDATION.md)
 
 ## License
@@ -131,6 +141,13 @@ AI로 만든 웹사이트·게임이 **왜 "AI 슬롭"처럼 보이는지** 찾�
 - 플러그인은 업데이트 후 `/reload-plugins`를 실행하거나 새 세션을 열면 적용됩니다.
 
 **사용** — 에이전트 안에서 **"이거 AI 슬롭처럼 보이는지 봐줘"** 라고 말하면 됩니다. 직접 실행하려면 위 [Usage](#usage) 명령을 쓰세요.
+
+**안전** — 검사하면 대상의 코드가 브라우저에서 실행되므로, 모든 대상을 신뢰하지 않는 것으로 다룹니다.
+
+- 브라우저 샌드박스를 켭니다. 컨테이너에서 켤 수 없을 때만, 믿는 대상에 한해 `SLOP_LENS_NO_SANDBOX=1`을 쓰세요.
+- localhost가 아닌 사이트에서는 게임 캔버스와 명확한 시작 버튼만 조작하고, `confirm()`에는 "아니요"로 답합니다.
+- 자동 조작이 시작되면 외부로 나가는 변경 요청(POST 등)을 막습니다. 다만 GET으로 상태를 바꾸는 사이트까지 막는다고 보장하지는 못합니다.
+- 검사 대상 폴더 안의 파일은 그 페이지가 읽을 수 있습니다(숨김·키 파일 제외). 받은 프로젝트는 별도 폴더에서 검사하세요.
 
 **얼마나 믿어도 되나요**
 

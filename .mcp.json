@@ -1,8 +1,0 @@
-{
-  "mcpServers": {
-    "slop-lens": {
-      "command": "python",
-      "args": ["${CLAUDE_PLUGIN_ROOT}/bin/slop-lens-mcp.py"]
-    }
-  }
-}

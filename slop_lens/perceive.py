@@ -10,10 +10,9 @@ import glob
 import json
 import os
 import re
-import subprocess
 import tempfile
 
-from . import render as _render
+from . import proc, render as _render
 
 IMG_EXT = (".png", ".jpg", ".jpeg", ".webp", ".gif", ".bmp")
 AUD_EXT = (".wav", ".mp3", ".ogg", ".m4a")
@@ -31,7 +30,9 @@ AI_AUDIO = [(b"suno", "Suno"), (b"udio", "Udio"), (b"aiva", "AIVA"), (b"soundraw
 def _walk(root, exts, limit=4000):
     out = []
     for dp, dn, fn in os.walk(root):
-        if SKIP.search(dp + os.sep):
+        # match below the project only: the project itself may live under Temp/, docs/, tests/ ...
+        below = os.path.relpath(dp, root)
+        if below != "." and SKIP.search(os.sep + below + os.sep):
             dn[:] = []
             continue
         for f in fn:
@@ -113,7 +114,11 @@ def run(ctx, out_dir=None, extra_frames=(), extra_audio=(), timeout=300, extra_i
     if not st["available"]:
         res["error"] = st["reason"]
         return res
-    out_dir = out_dir or os.path.join(tempfile.gettempdir(), "slop-lens", "perception", os.path.basename(root or "url"))
+    if not out_dir:
+        # one folder per scan: two projects both called "game" must never share review sheets
+        base = os.path.join(tempfile.gettempdir(), "slop-lens", "perception")
+        os.makedirs(base, exist_ok=True)
+        out_dir = tempfile.mkdtemp(prefix=re.sub(r"[^\w-]+", "_", os.path.basename(root or "url"))[:24] + "-", dir=base)
     os.makedirs(out_dir, exist_ok=True)
     roots, rel = {}, lambda key, base, p: f"{key}/" + os.path.relpath(p, base).replace("\\", "/")
     spec = {"roots": roots, "images": [], "audio": [], "frames": [], "out": out_dir}
@@ -137,8 +142,7 @@ def run(ctx, out_dir=None, extra_frames=(), extra_audio=(), timeout=300, extra_i
     with open(sp, "w", encoding="utf-8") as _f:
         json.dump(spec, _f, ensure_ascii=False)
     try:
-        p = subprocess.run([st["node"], os.path.join(_render.PROBE_DIR, "perceive.mjs"), "--spec", sp], capture_output=True,
-                           timeout=timeout, cwd=_render.PROBE_DIR)
+        p = proc.run([st["node"], os.path.join(_render.PROBE_DIR, "perceive.mjs"), "--spec", sp], timeout, cwd=_render.PROBE_DIR)
         data = json.loads(p.stdout.decode("utf-8", "replace") or "{}")
     except Exception as e:
         res["error"] = f"지각 분석 실패: {e.__class__.__name__}"

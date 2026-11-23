@@ -13,39 +13,32 @@
  * }
  * Prints one JSON object: per-asset features + contact-sheet image paths for the visual review.
  */
-import http from 'node:http';
+import { launchBrowser, serveDirs } from './safety.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const args = Object.fromEntries(process.argv.slice(2).reduce((a, v, i, all) => (v.startsWith('--') && a.push([v.slice(2), all[i + 1]]), a), []));
-const emit = o => process.stdout.write(JSON.stringify(o));
+const emit = o => new Promise(done => process.stdout.write(JSON.stringify(o), () => done()));
 let chromium;
-try { ({ chromium } = await import('playwright-core')); } catch { emit({ ok: false, error: 'playwright-core 미설치' }); process.exit(0); }
+try { ({ chromium } = await import('playwright-core')); } catch { await emit({ ok: false, error: 'playwright-core 미설치' }); process.exit(0); }
 
 const spec = JSON.parse(fs.readFileSync(args.spec, 'utf8'));
 const LIB = fs.readFileSync(path.join(here, 'analysis-lib.js'), 'utf8');
 const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.gif': 'image/gif', '.bmp': 'image/bmp',
   '.tga': 'application/octet-stream', '.wav': 'audio/wav', '.mp3': 'audio/mpeg', '.ogg': 'audio/ogg', '.m4a': 'audio/mp4', '.html': 'text/html; charset=utf-8' };
 
-const server = http.createServer((req, res) => {
-  const u = decodeURIComponent(new URL(req.url, 'http://x').pathname);
-  if (u === '/' || u === '/blank') { res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' }); return res.end('<!doctype html><meta charset=utf-8><body style="margin:0;background:#20202a">'); }
+const server = await serveDirs(u => {
+  if (u === '/' || u === '/blank') return { body: '<!doctype html><meta charset=utf-8><body style="margin:0;background:#20202a">' };
   const [, key, ...rest] = u.split('/');
-  const root = spec.roots[key];
-  if (!root) { res.writeHead(404); return res.end(); }
-  const base = path.resolve(root), f = path.resolve(base, rest.join('/'));
-  if (!f.startsWith(base) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); return res.end(); }
-  res.writeHead(200, { 'Content-Type': MIME[path.extname(f).toLowerCase()] || 'application/octet-stream', 'Access-Control-Allow-Origin': '*' });
-  fs.createReadStream(f).pipe(res);
-});
-await new Promise(r => server.listen(0, '127.0.0.1', r));
+  return Object.hasOwn(spec.roots, key) ? { root: spec.roots[key], rel: rest.join('/') } : null;
+}, MIME);
 const origin = `http://127.0.0.1:${server.address().port}`;
 
 let browser;
-for (const opt of [{ channel: 'chrome' }, { channel: 'msedge' }, {}]) { try { browser = await chromium.launch({ headless: true, ...opt }); break; } catch {} }
-if (!browser) { emit({ ok: false, error: '브라우저 실행 실패' }); process.exit(0); }
+try { ({ browser } = await launchBrowser(chromium)); }
+catch (e) { await emit({ ok: false, error: e.message }); process.exit(0); }
 const page = await browser.newPage({ viewport: { width: 1280, height: 900 } });
 await page.addInitScript({ content: LIB });
 await page.goto(origin + '/blank');
@@ -147,5 +140,5 @@ try {
 } catch (e) { out.sheetError = String(e).slice(0, 160); }
 
 await browser.close(); server.close();
-emit(out);
+await emit(out);
 process.exit(0);

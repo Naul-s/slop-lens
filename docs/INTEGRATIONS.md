@@ -65,7 +65,7 @@ gemini extensions install <git-url>             # 저장소로 배포 시
 python /ABS/PATH/slop-lens/bin/slop-lens.py scan ./my-site                 # 마크다운 리포트
 python /ABS/PATH/slop-lens/bin/slop-lens.py scan ./my-site --format json   # 기계 판독
 python /ABS/PATH/slop-lens/bin/slop-lens.py scan ./my-site --format html --out report.html
-python /ABS/PATH/slop-lens/bin/slop-lens.py brief ./my-site               # 리디자인 브리프만
+python /ABS/PATH/slop-lens/bin/slop-lens.py brief ./my-site               # 리디자인 브리프만 (게임은 리뷰 전이면 --reveal 필요)
 python /ABS/PATH/slop-lens/bin/slop-lens.py scan ./my-site --fail-over 40  # CI 게이트 (초과 시 exit 1)
 ```
 

@@ -14,5 +14,13 @@
     "mcp"
   ],
   "homepage": "https://github.com/Naul-s/slop-lens",
-  "repository": "https://github.com/Naul-s/slop-lens"
+  "repository": "https://github.com/Naul-s/slop-lens",
+  "mcpServers": {
+    "slop-lens": {
+      "command": "python",
+      "args": [
+        "${CLAUDE_PLUGIN_ROOT}/bin/slop-lens-mcp.py"
+      ]
+    }
+  }
 }

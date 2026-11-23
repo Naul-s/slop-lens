@@ -1,7 +1,7 @@
 """Scan orchestration: context → rules → findings → scores → fix plan."""
 import datetime as _dt
 import glob
-import hashlib
+import uuid
 import os
 import re
 
@@ -23,11 +23,11 @@ class ScanResult:
         self.visual_findings = []
         self.visual_answers = []  # (rule, value, note)  — legacy yes/no rubric
         self.review = []          # perception review items (see review.py)
+        self.revealed = False     # measurements were shown: a later review cannot count as blind
         self.attachments = []     # screenshots the reviewer took by hand (review.attach_images)
         self.errors = errors
         self.created = _dt.datetime.now().isoformat(timespec="seconds")
-        h = hashlib.sha1(f"{ctx.target}|{self.created}".encode()).hexdigest()[:8]
-        self.id = f"sl-{h}"
+        self.id = f"sl-{uuid.uuid4().hex[:8]}"
         self.recompute()
 
     # ------------------------------------------------------------------
@@ -48,6 +48,10 @@ class ScanResult:
         vals = [(r, v) for r, v, _ in self.visual_answers]
         self.visual_index = scoring.visual_score(vals)
         self.perception_index, self.review_craft = _rv.perception_index(self.review, self.kind)
+        self.review_missing = _rv.missing_for_verdict(self.review) if self.review else []
+        if self.review_missing:
+            self.perception_index = self.review_craft = None  # an incomplete review neither scores nor confirms
+        self.review_unsupported = _rv.unsupported(self.review)
         if self.perception_index is not None:
             # the reviewer's senses also define the two axes (sameness vs. unfinished)
             lv = {it["id"]: it["level"] for it in self.review if it["level"] is not None}
@@ -63,7 +67,7 @@ class ScanResult:
             self.index = round(0.65 * self.perception_index + 0.35 * self.evidence_index, 1)
             self.status = "확정"
             self.visual_blend = 0.65
-        elif self.visual_index is not None:
+        elif self.visual_index is not None and self.kind != "game":  # a game is confirmed only by the perception review
             answered = sum(1 for _, v in vals if v is not None)
             total = len([1 for r, _, _ in RUBRIC.values() if self.kind in r.applies])
             a = 0.45 * min(1.0, answered / max(1, total))
@@ -97,7 +101,8 @@ class ScanResult:
         self.confidence = scoring.confidence(self.ctx, (self.visual_blend / 0.45) if self.visual_index is not None else 0.0,
                                              reviewed=self.perception_index is not None,
                                              review_meta=getattr(self, "review_meta", None), agreement=self.agreement,
-                                             frame_coverage=self.frame_coverage, index=self.index)
+                                             frame_coverage=self.frame_coverage, index=self.index,
+                                             unsupported=self.review_unsupported)
 
     def attach(self, paths):
         """Add hand-taken screenshots to the review material. Returns (added, rejected)."""
@@ -116,6 +121,8 @@ class ScanResult:
             self.review_meta["blind"] = False
             self.review_meta["blind_overridden"] = True  # measurements were shown before this review
         self.recompute()
+        if self.perception_index is not None:
+            self.revealed = True  # this submission publishes the measurements
         return unknown
 
     def add_visual_answers(self, answers):
@@ -137,10 +144,13 @@ class ScanResult:
 
     # ------------------------------------------------------------------
     def _index_without(self, removed_ids):
+        """The index if these rules stopped firing. A reviewer's impression is left as it is: no one has looked again."""
         keep = [f for f in self.static_findings if f.rule.id not in removed_ids]
-        cats = scoring.category_scores(keep, self.kind)
+        cats = scoring.category_scores(keep, self.kind, self.fp_factor)
         s, _ = scoring.static_index(cats, self.kind)
-        if self.visual_index is not None:
+        if self.perception_index is not None:
+            return round(0.65 * self.perception_index + 0.35 * s, 1)
+        if self.visual_blend and self.visual_index is not None:
             vals = [(r, (0.0 if r.id in removed_ids else v)) for r, v, _ in self.visual_answers]
             vi = scoring.visual_score(vals)
             return round((1 - self.visual_blend) * s + self.visual_blend * vi, 1)
@@ -212,6 +222,7 @@ class ScanResult:
             "slop_index": self.index, "status": self.status, "static_index": self.static_index, "visual_index": self.visual_index,
             "perception_index": self.perception_index, "craft": {"score": self.craft, "evidence": self.craft_evidence, "fingerprint_factor": self.fp_factor},
             "review": self.review, "frame_notes": getattr(self, "frame_notes", []), "review_meta": getattr(self, "review_meta", None),
+            "review_missing": self.review_missing, "review_unsupported": self.review_unsupported,
             "attachments": list(getattr(self, "attachments", []) or []),
             "agreement": self.agreement, "frame_coverage": self.frame_coverage,
             "visual_blend": self.visual_blend, "convergence_bonus": self.convergence_bonus,
@@ -256,8 +267,9 @@ def _visible_words(html):
 
 def scan(target, kind="auto", render="auto", screenshots_dir=None, perception="auto"):
     """render: auto (use the Node probe if installed) | on (require it) | off."""
-    from . import render as _render
+    from . import proc as _proc, render as _render
     ctx = build_context(target, kind)
+    _proc.check_cancelled()
     if render != "off":
         data = _render.run(target, kind if kind in ("web", "game") else "auto", screenshots_dir)
         if data.get("ok") and BOTWALL.search((data.get("html") or "")[:200000]) and len(_visible_words(data.get("html") or "")) < 400:
@@ -325,6 +337,7 @@ def scan(target, kind="auto", render="auto", screenshots_dir=None, perception="a
             seen.add(x["t"]); ctx.screen_texts.append(x)
     findings, errors, superseded = [], [], set()
     for r in get_rules(ctx.kind):
+        _proc.check_cancelled()
         if r.source == "render" and not ctx.render:
             continue
         try:

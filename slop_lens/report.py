@@ -3,6 +3,7 @@ import html
 import json
 
 from .model import CATEGORIES, DRIVERS
+from .review import one_line
 
 
 def _bar(score, width=10):
@@ -50,7 +51,7 @@ def why_section(res, d):
             L.append(f"- **보이는/들리는 근거**: {it['evidence']}")
         for f in fs:
             ev = "; ".join((f"{e.file}: " if e.file and not e.file.startswith("(") else "") + e.snippet for e in f.evidence[:2])
-            L.append(f"- **측정 근거** [{f.rule.id}] {f.detail}" + (f" — {ev}" if ev else ""))
+            L.append(f"- **측정 근거** [{f.rule.id}] {one_line(f.detail, 300)}" + (f" — `{one_line(ev, 300)}`" if ev else ""))
         if it and it.get("fix"):
             L.append(f"- **해결**: {it['fix']}")
         for f in fs[:2]:
@@ -92,6 +93,8 @@ def to_markdown(res, max_findings=20, include_plan=True, include_brief=True):
         L.append(">")
         L.append("> **잠정 판정**입니다. 슬롭인지는 화면과 소리를 직접 보고 듣는 사람이 가장 잘 판단합니다. "
                  "아래 원인 목록은 측정에서 나온 근거이며, `slop_review_protocol`로 지각 리뷰를 하면 확정됩니다.")
+    if d.get("review_missing"):
+        L += [">", "> 리뷰가 불완전해 판정에 반영하지 않았습니다. 필요한 것: " + ", ".join(d["review_missing"])]
     ag = d.get("agreement")
     rm = d.get("review_meta") or {}
     if d.get("perception_index") is not None:
@@ -179,13 +182,12 @@ def to_markdown(res, max_findings=20, include_plan=True, include_brief=True):
                  f"{'AI 지문' if f['kind'] == 'fingerprint' else '완성도 결함'} · {', '.join(f['drivers'])}{src}")
         L.append("")
         if f["detail"]:
-            L.append(f"- **탐지**: {f['detail']}")
+            L.append(f"- **탐지**: {one_line(f['detail'], 300)}")
         if f["note"]:
             L.append(f"- **검토 메모**: {f['note']}")
         for e in f["evidence"][:4]:
             loc = f"{e['file']}:{e['line']}" if e["line"] else e["file"]
-            snip = e["snippet"].replace("`", "'")[:110]
-            L.append(f"- `{loc}` — `{snip}`")
+            L.append(f"- `{one_line(loc)}` — `{one_line(e['snippet'], 110)}`")
         L.append(f"- **왜 슬롭으로 보이나**: {f['why']}")
         fx = f["fix"]
         L.append(f"- **해결**: {fx.get('summary', '')}")
@@ -206,14 +208,16 @@ def to_markdown(res, max_findings=20, include_plan=True, include_brief=True):
         plan = d["fix_plan"]
         L.append("## 수정 계획 (우선순위 = 영향 ÷ 노력)")
         L.append("")
-        L.append(f"현재 Slop Index **{d['slop_index']:.0f}**")
+        L.append(f"현재 Slop Index **{d['slop_index']:.0f}**"
+                 + (" — 예상치는 리뷰어가 받은 인상은 그대로 두고 측정 지적만 없앤 값입니다. 실제 효과는 다시 리뷰해야 압니다."
+                    if d.get("perception_index") is not None else ""))
         for ph, pj in zip(plan["phases"], plan["projections"]):
             if not ph["items"]:
                 continue
             L.append("")
             L.append(f"### {ph['label']} → 완료 시 예상 Index **{pj['index']:.0f}**")
             for it in ph["items"]:
-                where = f" ({', '.join(it['where'][:2])})" if it["where"] else ""
+                where = f" ({one_line(', '.join(it['where'][:2]))})" if it["where"] else ""
                 L.append(f"- [ ] **[{it['rule_id']}] {it['title']}** — {it['summary']}{where}")
         L.append("")
     if include_brief and fs:
@@ -243,7 +247,14 @@ def to_markdown(res, max_findings=20, include_plan=True, include_brief=True):
 
 def needs_blind(res):
     """Games are judged by a review first; until then the measured findings stay hidden so they can't anchor it."""
-    return res.kind == "game" and not res.review
+    return res.kind == "game" and res.perception_index is None
+
+
+def incomplete_review(res):
+    """Reply to a game review too thin to confirm a verdict: says what is missing, reveals nothing."""
+    need = res.review_missing or ["감각별 답(S1~S9)"]
+    return "\n".join(["# 리뷰가 불완전해 아직 판정하지 않았습니다", "", "부족한 것:"] + [f"- {n}" for n in need] + [
+        "", "측정 결과는 계속 숨겨져 있으므로, 채워서 다시 제출해도 블라인드 리뷰로 인정됩니다.", f"scan_id `{res.id}`"])
 
 
 def blind_summary(res, as_json=False):
@@ -256,7 +267,7 @@ def blind_summary(res, as_json=False):
         "rendered": bool(r),
         "screenshots": sum(len(v) if isinstance(v, list) else 1 for v in ((r or {}).get("screenshots") or {}).values()),
         "frame_sheet": bool((p.get("sheets") or {}).get("frames")),
-        "play_reached": play_reached(ctx),
+        "responded_to_play": play_reached(ctx),
         "sound_recorded": bool(((r or {}).get("game") or {}).get("sound")) or bool((getattr(ctx, "unity", None) or {}).get("capture")),
     }
     from .review import autoplay_lines
@@ -279,7 +290,7 @@ def blind_summary(res, as_json=False):
          "**측정 결과(의심 규칙·점수)는 리뷰가 거기에 끌려가지 않도록 리뷰를 제출할 때까지 숨깁니다.**", "",
          "## 수집한 자료",
          f"- 실제 브라우저 실행: {yn(captured['rendered'])} · 스크린샷 {captured['screenshots']}장 · 화면 시트: {yn(captured['frame_sheet'])}",
-         f"- 자동 플레이가 게임 화면까지 도달: {yn(captured['play_reached'])} · 소리 기록: {yn(captured['sound_recorded'])}"]
+         f"- 자동 플레이 중 화면·소리 변화: {yn(captured['responded_to_play'])} (본편 도달 여부는 프레임으로 확인) · 소리 기록: {yn(captured['sound_recorded'])}"]
     L += route + ["", "## 다음 단계"] + [f"{i}. {s}" for i, s in enumerate(nxt, 1)] + [
          "", "> 측정 결과를 지금 보려면 `reveal: true`(CLI `--reveal`)로 다시 요청하세요. 그 뒤의 리뷰는 블라인드가 아닌 것으로 기록됩니다."]
     return "\n".join(L)

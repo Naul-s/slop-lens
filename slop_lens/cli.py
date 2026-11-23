@@ -59,6 +59,7 @@ def main(argv=None):
     b.add_argument("target")
     b.add_argument("--kind", default="auto", choices=["auto", "web", "game"])
     b.add_argument("--out")
+    b.add_argument("--reveal", action="store_true", help="게임: 리뷰 전에도 브리프(=측정 결과) 출력")
     b.add_argument("--render", default="auto", choices=["auto", "on", "off"])
 
     r = sub.add_parser("rubric", help="시각 검토 루브릭 출력")
@@ -115,7 +116,8 @@ def main(argv=None):
         res = scan(a.target, a.kind, a.render, a.shots, a.perception)
         if a.protocol:
             from .review import protocol_markdown
-            _out(protocol_markdown(res, blind=a.blind, attach=a.attach), a.out)
+            blind = a.blind or (report.needs_blind(res) and not a.reveal)
+            _out(protocol_markdown(res, blind=blind, attach=a.attach), a.out)
             return 0
         if a.review:
             with open(a.review, encoding="utf-8") as f:
@@ -125,6 +127,8 @@ def main(argv=None):
                                      rv.get("meta") if isd else None, attach=(a.attach or []) + list((rv.get("attach") if isd else None) or []))
             if unknown:
                 print("알 수 없는 리뷰 ID 무시: " + ", ".join(unknown), file=sys.stderr)
+            if res.review_missing:
+                print("리뷰가 불완전해 판정에 반영하지 않음: " + ", ".join(res.review_missing), file=sys.stderr)
         if a.visual:
             with open(a.visual, encoding="utf-8") as f:
                 data = json.load(f)
@@ -146,6 +150,10 @@ def main(argv=None):
         return 0
     if a.cmd == "brief":
         res = scan(a.target, a.kind, a.render)
+        if report.needs_blind(res) and not a.reveal:
+            print("게임 브리프는 측정 결과를 담고 있어 리뷰 전에는 숨깁니다. 먼저 `scan <대상> --protocol --blind`로 리뷰하거나, "
+                  "지금 보려면 --reveal을 주세요.", file=sys.stderr)
+            return 2
         _out(res.brief(), a.out)
         return 0
     if a.cmd == "rubric":

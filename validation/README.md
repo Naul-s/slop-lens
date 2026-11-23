@@ -22,4 +22,17 @@
    python scripts/evaluate.py my-targets.json validation/my-results --final validation/my-final
    ```
 
+## 사람 기준으로 재기
+
+위의 정확도는 "누가 만들었나"를 맞히는 정도입니다. "슬롭으로 느껴지나"는 사람에게 물어야 합니다.
+
+```bash
+python scripts/human_benchmark.py build items.json kit/
+python scripts/human_benchmark.py score kit.key.json answers/ scores.json
+```
+
+- `items.json`: `[{"name": "game-a", "images": ["a1.png"]}]`, `scores.json`: `{"game-a": 63.5}`
+- 평가자에게는 `kit/` 폴더만 줍니다. `kit.key.json`과 점수는 주지 마세요.
+- 3명 이상이 서로 상의하지 않고 답해야 합니다. 사람끼리의 일치(α)가 낮으면 도구 일치도를 정확도로 읽지 마세요.
+
 결과를 [이슈](https://github.com/Naul-s/slop-lens/issues)로 공유해 주시면 기준을 개선하는 데 씁니다. 특히 **오판 사례**(사람이 만든 작품이 높게, AI 슬롭이 낮게 나온 경우)가 가장 도움이 됩니다.
